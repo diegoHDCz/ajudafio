@@ -38,11 +38,11 @@ func main() {
 	}
 	defer db.Close()
 
-	// ── Migrations ────────────────────────────────────────────────────────────
-	if err := database.RunMigrations(cfg.DatabaseURL, cfg.MigrationsPath); err != nil {
-		slog.Error("failed to run migrations", "error", err)
-		os.Exit(1)
-	}
+	// // ── Migrations ────────────────────────────────────────────────────────────
+	// if err := database.RunMigrations(cfg.DatabaseURL, cfg.MigrationsPath); err != nil {
+	// 	slog.Error("failed to run migrations", "error", err)
+	// 	os.Exit(1)
+	// }
 
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)

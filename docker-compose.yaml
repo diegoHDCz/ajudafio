@@ -38,12 +38,16 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: "true"
+      KC_HEALTH_PROBE_INTERVAL: "10s"
+      KC_HEALTH_PROBE_TIMEOUT: "5s"
+      KC_HEALTH_PROBE_RETRIES: "15"
     volumes:
       - ./config/keycloak:/opt/keycloak/data/import
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/health/ready || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/live"]
       interval: 10s
       timeout: 5s
       retries: 15
