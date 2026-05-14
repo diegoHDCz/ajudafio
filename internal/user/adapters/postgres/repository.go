@@ -47,18 +47,10 @@ func (r *repository) GetByEmail(ctx context.Context, email string) (*domain.User
 
 func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
 	row, err := r.queries.CreateUser(ctx, CreateUserParams{
-		Email:                   user.Email,
-		Name:                    user.Name,
-		Telephone:               user.Telephone,
-		TelephoneWhatsapp:       user.TelephoneWhatsapp,
-		SecondTelephone:         user.SecondTelephone,
-		SecondTelephoneWhatsapp: user.SecondTelephoneWhatsapp,
-		Linkedin:                user.Linkedin,
-		Instagram:               user.Instagram,
-		Facebook:                user.Facebook,
-		IdentificationNumber:    user.IdentificationNumber,
-		IdentificationType:      user.IdentificationType,
-		Role:                    string(user.Role),
+		Name:  user.Name,
+		Email: user.Email,
+		Phone: user.Phone, // sqlc gerou como *string, certifique-se que o domínio também seja ou converta aqui
+		Role:  string(user.Role),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("userpostgres.Create: %w", err)
@@ -68,17 +60,11 @@ func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.Use
 
 func (r *repository) Update(ctx context.Context, user *domain.User) (*domain.User, error) {
 	row, err := r.queries.UpdateUser(ctx, UpdateUserParams{
-		ID:                      user.ID,
-		Name:                    user.Name,
-		Telephone:               user.Telephone,
-		TelephoneWhatsapp:       user.TelephoneWhatsapp,
-		SecondTelephone:         user.SecondTelephone,
-		SecondTelephoneWhatsapp: user.SecondTelephoneWhatsapp,
-		Linkedin:                user.Linkedin,
-		Instagram:               user.Instagram,
-		Facebook:                user.Facebook,
-		IdentificationNumber:    user.IdentificationNumber,
-		IdentificationType:      user.IdentificationType,
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		Phone: user.Phone,
+		Role:  string(user.Role),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("userpostgres.Update: %w", err)
@@ -93,25 +79,15 @@ func (r *repository) Delete(ctx context.Context, id domain.UserID) error {
 	return nil
 }
 
-// toDomain maps the sqlc-generated row to the domain entity.
+// toDomain mapeia a struct local "User" (gerada pelo sqlc) para a entidade de domínio.
 func toDomain(row User) *domain.User {
 	return &domain.User{
-		ID:                      domain.UserID(row.ID),
-		Email:                   row.Email,
-		Name:                    row.Name,
-		EmailVerified:           row.EmailVerified,
-		Image:                   row.Image,
-		Telephone:               row.Telephone,
-		TelephoneWhatsapp:       row.TelephoneWhatsapp,
-		SecondTelephone:         row.SecondTelephone,
-		SecondTelephoneWhatsapp: row.SecondTelephoneWhatsapp,
-		Linkedin:                row.Linkedin,
-		Instagram:               row.Instagram,
-		Facebook:                row.Facebook,
-		IdentificationNumber:    row.IdentificationNumber,
-		IdentificationType:      row.IdentificationType,
-		Role:                    domain.Role(row.Role),
-		CreatedAt:               row.CreatedAt.Time,
-		UpdatedAt:               row.UpdatedAt.Time,
+		ID:        row.ID, // Já mapeado via sqlc override para domain.UserID
+		Name:      row.Name,
+		Email:     row.Email,
+		Phone:     row.Phone, // *string
+		Role:      domain.Role(row.Role),
+		CreatedAt: row.CreatedAt.Time,
+		UpdatedAt: row.UpdatedAt.Time,
 	}
 }

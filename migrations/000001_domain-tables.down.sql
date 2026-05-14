@@ -5,3 +5,4 @@ DROP TABLE IF EXISTS addresses;
 DROP TABLE IF EXISTS contracts;
 DROP TABLE IF EXISTS availabilities;
 DROP TABLE IF EXISTS professionals;
+DROP TABLE IF EXISTS users;

@@ -97,23 +97,13 @@ type Session struct {
 }
 
 type User struct {
-	ID                      domain.UserID    `json:"id"`
-	Email                   string           `json:"email"`
-	Name                    *string          `json:"name"`
-	EmailVerified           bool             `json:"email_verified"`
-	Image                   *string          `json:"image"`
-	Telephone               *string          `json:"telephone"`
-	TelephoneWhatsapp       bool             `json:"telephone_whatsapp"`
-	SecondTelephone         *string          `json:"second_telephone"`
-	SecondTelephoneWhatsapp bool             `json:"second_telephone_whatsapp"`
-	Linkedin                *string          `json:"linkedin"`
-	Instagram               *string          `json:"instagram"`
-	Facebook                *string          `json:"facebook"`
-	IdentificationNumber    *string          `json:"identification_number"`
-	IdentificationType      *string          `json:"identification_type"`
-	Role                    string           `json:"role"`
-	CreatedAt               pgtype.Timestamp `json:"created_at"`
-	UpdatedAt               pgtype.Timestamp `json:"updated_at"`
+	ID        domain.UserID    `json:"id"`
+	Name      string           `json:"name"`
+	Email     string           `json:"email"`
+	Phone     *string          `json:"phone"`
+	Role      string           `json:"role"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
 type Verification struct {

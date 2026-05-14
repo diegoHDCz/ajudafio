@@ -16,6 +16,7 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
@@ -56,6 +57,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(authmiddleware.Extract)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

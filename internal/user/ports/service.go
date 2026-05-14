@@ -15,30 +15,16 @@ type UserService interface {
 }
 
 type CreateUserInput struct {
-	Email                   string
-	Name                    *string
-	Telephone               *string
-	TelephoneWhatsapp       bool
-	SecondTelephone         *string
-	SecondTelephoneWhatsapp bool
-	Linkedin                *string
-	Instagram               *string
-	Facebook                *string
-	IdentificationNumber    *string
-	IdentificationType      *string
-	Role                    domain.Role
+	Email string
+	Name  string  // Obrigatório (NOT NULL no banco)
+	Phone *string // Opcional no banco
+	Role  domain.Role
 }
 
 type UpdateUserInput struct {
-	ID                      domain.UserID
-	Name                    *string
-	Telephone               *string
-	TelephoneWhatsapp       *bool
-	SecondTelephone         *string
-	SecondTelephoneWhatsapp *bool
-	Linkedin                *string
-	Instagram               *string
-	Facebook                *string
-	IdentificationNumber    *string
-	IdentificationType      *string
+	ID    domain.UserID
+	Email *string
+	Name  *string
+	Phone *string
+	Role  *domain.Role
 }

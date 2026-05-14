@@ -1,3 +1,16 @@
+-- Users
+CREATE TABLE IF NOT EXISTS users (
+  id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT        NOT NULL,
+  email      TEXT        NOT NULL UNIQUE,
+  phone      TEXT,
+  role       VARCHAR(20) NOT NULL DEFAULT 'CLIENT',
+  created_at TIMESTAMP   NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP   NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT chk_user_role CHECK (role IN ('CLIENT', 'PROFESSIONAL', 'ADMIN'))
+);
+
 -- Professionals
 CREATE TABLE professionals (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
