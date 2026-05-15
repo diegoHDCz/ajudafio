@@ -47,6 +47,7 @@ migrate-create: ## Create a new migration (usage: make migrate-create NAME=creat
 
 sqlc: ## Regenerate type-safe Go code from SQL queries
 		sqlc generate -f internal/user/sqlc.yaml
+		sqlc generate -f internal/auth/sqlc.yaml
 
 # ── Docker ─────────────────────────────────────────────────────────────────────
  

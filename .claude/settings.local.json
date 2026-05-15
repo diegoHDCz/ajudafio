@@ -9,7 +9,9 @@
       "Bash(make -n migrate-up)",
       "Bash(migrate -path ./migrations -database \"postgresql://postgres:postgres@localhost:5432/ajudafio?sslmode=disable\" force 0)",
       "Bash(docker exec ajudafio_postgres *)",
-      "Bash(Get-ChildItem -Recurse -Filter \"Makefile\")"
+      "Bash(Get-ChildItem -Recurse -Filter \"Makefile\")",
+      "Bash(go build *2)",
+      "Bash(go build *)"
     ]
   }
 }

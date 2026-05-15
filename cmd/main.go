@@ -16,6 +16,9 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
+	"github.com/diegoHDCz/ajudafio/internal/auth"
+	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
+	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
@@ -44,6 +47,11 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
+	// ── Wire: auth slice ──────────────────────────────────────────────────────
+	authRepo := authpostgres.NewRepository(db)
+	authSvc := auth.NewAuthService(authRepo)
+	authHandler := authhttp.NewHandler(authSvc)
+
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
 	userSvc := user.NewService(userRepo)
@@ -63,6 +71,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	r.Mount("/auth", authhttp.NewRouter(authHandler))
 	r.Mount("/users", userhttp.NewRouter(userHandler))
 
 	// ── Server ────────────────────────────────────────────────────────────────
