@@ -13,81 +13,39 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-  email,
   name,
-  telephone,
-  telephone_whatsapp,
-  second_telephone,
-  second_telephone_whatsapp,
-  linkedin,
-  instagram,
-  facebook,
-  identification_number,
-  identification_type,
+  email,
+  phone,
   role
 ) VALUES (
   $1,
   $2,
   $3,
-  $4,
-  $5,
-  $6,
-  $7,
-  $8,
-  $9,
-  $10,
-  $11,
-  $12
+  $4
 )
-RETURNING id, email, name, email_verified, image, telephone, telephone_whatsapp, second_telephone, second_telephone_whatsapp, linkedin, instagram, facebook, identification_number, identification_type, role, created_at, updated_at
+RETURNING id, name, email, phone, role, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Email                   string  `json:"email"`
-	Name                    *string `json:"name"`
-	Telephone               *string `json:"telephone"`
-	TelephoneWhatsapp       bool    `json:"telephone_whatsapp"`
-	SecondTelephone         *string `json:"second_telephone"`
-	SecondTelephoneWhatsapp bool    `json:"second_telephone_whatsapp"`
-	Linkedin                *string `json:"linkedin"`
-	Instagram               *string `json:"instagram"`
-	Facebook                *string `json:"facebook"`
-	IdentificationNumber    *string `json:"identification_number"`
-	IdentificationType      *string `json:"identification_type"`
-	Role                    string  `json:"role"`
+	Name  string  `json:"name"`
+	Email string  `json:"email"`
+	Phone *string `json:"phone"`
+	Role  string  `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
-		arg.Email,
 		arg.Name,
-		arg.Telephone,
-		arg.TelephoneWhatsapp,
-		arg.SecondTelephone,
-		arg.SecondTelephoneWhatsapp,
-		arg.Linkedin,
-		arg.Instagram,
-		arg.Facebook,
-		arg.IdentificationNumber,
-		arg.IdentificationType,
+		arg.Email,
+		arg.Phone,
 		arg.Role,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.Name,
-		&i.EmailVerified,
-		&i.Image,
-		&i.Telephone,
-		&i.TelephoneWhatsapp,
-		&i.SecondTelephone,
-		&i.SecondTelephoneWhatsapp,
-		&i.Linkedin,
-		&i.Instagram,
-		&i.Facebook,
-		&i.IdentificationNumber,
-		&i.IdentificationType,
+		&i.Email,
+		&i.Phone,
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -106,7 +64,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id domain.UserID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, email_verified, image, telephone, telephone_whatsapp, second_telephone, second_telephone_whatsapp, linkedin, instagram, facebook, identification_number, identification_type, role, created_at, updated_at
+SELECT id, name, email, phone, role, created_at, updated_at
 FROM users
 WHERE email = $1
 LIMIT 1
@@ -117,19 +75,9 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.Name,
-		&i.EmailVerified,
-		&i.Image,
-		&i.Telephone,
-		&i.TelephoneWhatsapp,
-		&i.SecondTelephone,
-		&i.SecondTelephoneWhatsapp,
-		&i.Linkedin,
-		&i.Instagram,
-		&i.Facebook,
-		&i.IdentificationNumber,
-		&i.IdentificationType,
+		&i.Email,
+		&i.Phone,
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -138,7 +86,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, name, email_verified, image, telephone, telephone_whatsapp, second_telephone, second_telephone_whatsapp, linkedin, instagram, facebook, identification_number, identification_type, role, created_at, updated_at
+SELECT id, name, email, phone, role, created_at, updated_at
 FROM users
 WHERE id = $1
 LIMIT 1
@@ -149,19 +97,9 @@ func (q *Queries) GetUserByID(ctx context.Context, id domain.UserID) (User, erro
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.Name,
-		&i.EmailVerified,
-		&i.Image,
-		&i.Telephone,
-		&i.TelephoneWhatsapp,
-		&i.SecondTelephone,
-		&i.SecondTelephoneWhatsapp,
-		&i.Linkedin,
-		&i.Instagram,
-		&i.Facebook,
-		&i.IdentificationNumber,
-		&i.IdentificationType,
+		&i.Email,
+		&i.Phone,
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -171,65 +109,37 @@ func (q *Queries) GetUserByID(ctx context.Context, id domain.UserID) (User, erro
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users SET
-  name                      = COALESCE($1, name),
-  telephone                 = COALESCE($2, telephone),
-  telephone_whatsapp        = COALESCE($3, telephone_whatsapp),
-  second_telephone          = COALESCE($4, second_telephone),
-  second_telephone_whatsapp = COALESCE($5, second_telephone_whatsapp),
-  linkedin                  = COALESCE($6, linkedin),
-  instagram                 = COALESCE($7, instagram),
-  facebook                  = COALESCE($8, facebook),
-  identification_number     = COALESCE($9, identification_number),
-  identification_type       = COALESCE($10, identification_type),
-  updated_at                = NOW()
-WHERE id = $11
-RETURNING id, email, name, email_verified, image, telephone, telephone_whatsapp, second_telephone, second_telephone_whatsapp, linkedin, instagram, facebook, identification_number, identification_type, role, created_at, updated_at
+  name       = COALESCE($1, name),
+  email      = COALESCE($2, email),
+  phone      = COALESCE($3, phone),
+  role       = COALESCE($4, role),
+  updated_at = NOW()
+WHERE id = $5
+RETURNING id, name, email, phone, role, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Name                    *string       `json:"name"`
-	Telephone               *string       `json:"telephone"`
-	TelephoneWhatsapp       bool          `json:"telephone_whatsapp"`
-	SecondTelephone         *string       `json:"second_telephone"`
-	SecondTelephoneWhatsapp bool          `json:"second_telephone_whatsapp"`
-	Linkedin                *string       `json:"linkedin"`
-	Instagram               *string       `json:"instagram"`
-	Facebook                *string       `json:"facebook"`
-	IdentificationNumber    *string       `json:"identification_number"`
-	IdentificationType      *string       `json:"identification_type"`
-	ID                      domain.UserID `json:"id"`
+	Name  string        `json:"name"`
+	Email string        `json:"email"`
+	Phone *string       `json:"phone"`
+	Role  string        `json:"role"`
+	ID    domain.UserID `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, updateUser,
 		arg.Name,
-		arg.Telephone,
-		arg.TelephoneWhatsapp,
-		arg.SecondTelephone,
-		arg.SecondTelephoneWhatsapp,
-		arg.Linkedin,
-		arg.Instagram,
-		arg.Facebook,
-		arg.IdentificationNumber,
-		arg.IdentificationType,
+		arg.Email,
+		arg.Phone,
+		arg.Role,
 		arg.ID,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Email,
 		&i.Name,
-		&i.EmailVerified,
-		&i.Image,
-		&i.Telephone,
-		&i.TelephoneWhatsapp,
-		&i.SecondTelephone,
-		&i.SecondTelephoneWhatsapp,
-		&i.Linkedin,
-		&i.Instagram,
-		&i.Facebook,
-		&i.IdentificationNumber,
-		&i.IdentificationType,
+		&i.Email,
+		&i.Phone,
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,

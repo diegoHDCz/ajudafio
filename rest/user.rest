@@ -1,0 +1,74 @@
+### -- Variables -------------------------------------------------------
+@gatewayUrl  = http://localhost:8090
+@keycloakUrl = http://localhost:8180
+@realm       = ajudafio
+@clientId    = ajudafio-frontend
+
+# Regular user (CLIENT role)
+@username = test@ajudafio.com
+@password = Test@123
+
+# Admin user — needs ADMIN role assigned in Keycloak (required for DELETE)
+@adminUsername = admin@ajudafio.com
+@adminPassword = Admin@123
+
+
+### 1 — Login as regular user
+# @name login
+POST {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id={{clientId}}&username={{username}}&password={{password}}
+
+
+###
+
+### 2 — Create User  [POST /api/users]
+# @name createUser
+POST {{gatewayUrl}}/api/users
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "email": "new.user@ajudafio.com",
+  "name": "New User",
+  "phone": "+55 11 99999-0000",
+  "role": "CLIENT"
+}
+
+
+###
+
+### 3 — Get User by ID  [GET /api/users/{id}]
+GET {{gatewayUrl}}/api/users/{{createUser.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+
+###
+
+### 4 — Update User  [PATCH /api/users/{id}]
+PATCH {{gatewayUrl}}/api/users/{{createUser.response.body.$.id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "phone": "+55 11 88888-0000"
+}
+
+
+###
+
+### 5 — Login as Admin  (required for DELETE — KrakenD enforces ADMIN role)
+# @name adminLogin
+POST {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id={{clientId}}&username={{adminUsername}}&password={{adminPassword}}
+
+
+###
+
+### 6 — Delete User  [DELETE /api/users/{id}]  — ADMIN role required
+DELETE {{gatewayUrl}}/api/users/{{createUser.response.body.$.id}}
+Authorization: Bearer {{adminLogin.response.body.$.access_token}}

@@ -16,6 +16,10 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
+	"github.com/diegoHDCz/ajudafio/internal/auth"
+	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
+	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
@@ -37,11 +41,16 @@ func main() {
 	}
 	defer db.Close()
 
-	// ── Migrations ────────────────────────────────────────────────────────────
-	if err := database.RunMigrations(cfg.DatabaseURL, cfg.MigrationsPath); err != nil {
-		slog.Error("failed to run migrations", "error", err)
-		os.Exit(1)
-	}
+	// // ── Migrations ────────────────────────────────────────────────────────────
+	// if err := database.RunMigrations(cfg.DatabaseURL, cfg.MigrationsPath); err != nil {
+	// 	slog.Error("failed to run migrations", "error", err)
+	// 	os.Exit(1)
+	// }
+
+	// ── Wire: auth slice ──────────────────────────────────────────────────────
+	authRepo := authpostgres.NewRepository(db)
+	authSvc := auth.NewAuthService(authRepo)
+	authHandler := authhttp.NewHandler(authSvc)
 
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
@@ -56,11 +65,13 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(authmiddleware.Extract)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	r.Mount("/auth", authhttp.NewRouter(authHandler))
 	r.Mount("/users", userhttp.NewRouter(userHandler))
 
 	// ── Server ────────────────────────────────────────────────────────────────

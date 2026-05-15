@@ -1,0 +1,70 @@
+### -- Variables -------------------------------------------------------
+@keycloakUrl = http://localhost:8180
+@apiUrl      = http://localhost:8080
+@realm       = ajudafio
+@clientId    = ajudafio-frontend
+
+# Test user — must exist in Keycloak (create via http://localhost:8180 → realm ajudafio)
+@username = test@ajudafio.com
+@password = Test@123
+
+
+### 0 — Health Check (no auth required)
+GET {{apiUrl}}/health
+
+
+###
+
+### 1 — Login (Resource Owner Password Credentials)
+# @name login
+POST {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&client_id={{clientId}}&username={{username}}&password={{password}}
+
+
+###
+
+### 2 — Keycloak UserInfo  (resolves `sub` claim without manually decoding the JWT)
+# @name userinfo
+GET {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/userinfo
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+
+###
+
+### 3 — GET /auth/me  (direct API — in production KrakenD injects X-User-* from the JWT)
+GET {{apiUrl}}/auth/me
+X-User-Id:    {{userinfo.response.body.$.sub}}
+X-User-Email: {{username}}
+X-User-Name:  {{userinfo.response.body.$.preferred_username}}
+X-User-Roles: CLIENT
+
+
+###
+
+### 4 — GET /auth/me/accounts
+GET {{apiUrl}}/auth/me/accounts
+X-User-Id:    {{userinfo.response.body.$.sub}}
+X-User-Email: {{username}}
+X-User-Name:  {{userinfo.response.body.$.preferred_username}}
+X-User-Roles: CLIENT
+
+
+###
+
+### 5 — Refresh Token
+# @name refresh
+POST {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&client_id={{clientId}}&refresh_token={{login.response.body.$.refresh_token}}
+
+
+###
+
+### 6 — Logout (invalidates the refresh token)
+POST {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/logout
+Content-Type: application/x-www-form-urlencoded
+
+client_id={{clientId}}&refresh_token={{login.response.body.$.refresh_token}}

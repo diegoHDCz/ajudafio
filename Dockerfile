@@ -1,27 +1,39 @@
-# ── Build stage ───────────────────────────────────────────────────────────────
-FROM golang:1.23-alpine AS builder
+# --- Estágio de Compilação (Build) ---
+FROM golang:1.26-alpine AS builder
 
+# Define o diretório de trabalho
 WORKDIR /app
 
-RUN apk add --no-cache git
-
+# Copia os arquivos de dependências para aproveitar o cache de camadas do Docker
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copia o restante do código fonte
+# O Docker ignora arquivos listados no .dockerignore (como node_modules ou binários locais)
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o /bin/api ./cmd/api
+# Compila o binário
+# GOOS=linux garante que o binário funcione no container Alpine
+# CGO_ENABLED=0 cria um binário estático (sem dependências de C externas)
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/main.go
 
-# ── Final stage ───────────────────────────────────────────────────────────────
-FROM alpine:3.20
+# --- Estágio Final (Runtime) ---
+FROM alpine:latest
 
-RUN apk add --no-cache ca-certificates tzdata
+# Adiciona certificados CA para permitir chamadas HTTPS externas
+RUN apk --no-cache add ca-certificates
 
-WORKDIR /app
+# Cria um usuário não-root por segurança (boa prática de produção)
+RUN adduser -D appuser
+USER appuser
 
-COPY --from=builder /bin/api .
+WORKDIR /home/appuser/
 
+# Copia apenas o executável final do estágio de build
+COPY --from=builder /app/server .
+
+# Porta que a aplicação escuta (ajuste conforme seu código)
 EXPOSE 8080
 
-ENTRYPOINT ["./api"]
+# Executa o binário
+CMD ["./server"]

@@ -1,4 +1,4 @@
-package userhttp
+package http
 
 import (
 	"encoding/json"
@@ -32,7 +32,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
@@ -47,19 +47,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Como no banco Name é NOT NULL, validamos aqui ou deixamos o Service tratar
+	if body.Name == "" || body.Email == "" {
+		http.Error(w, "name and email are required", http.StatusBadRequest)
+		return
+	}
+
 	user, err := h.svc.Create(r.Context(), ports.CreateUserInput{
-		Email:                   body.Email,
-		Name:                    body.Name,
-		Telephone:               body.Telephone,
-		TelephoneWhatsapp:       derefBool(body.TelephoneWhatsapp),
-		SecondTelephone:         body.SecondTelephone,
-		SecondTelephoneWhatsapp: derefBool(body.SecondTelephoneWhatsapp),
-		Linkedin:                body.Linkedin,
-		Instagram:               body.Instagram,
-		Facebook:                body.Facebook,
-		IdentificationNumber:    body.IdentificationNumber,
-		IdentificationType:      body.IdentificationType,
-		Role:                    domain.Role(derefString(body.Role, string(domain.RoleClient))),
+		Email: body.Email,
+		Name:  body.Name,
+		Phone: body.Phone,
+		Role:  derefRole(body.Role, domain.RoleClient),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -80,17 +78,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.svc.Update(r.Context(), ports.UpdateUserInput{
-		ID:                      id,
-		Name:                    body.Name,
-		Telephone:               body.Telephone,
-		TelephoneWhatsapp:       body.TelephoneWhatsapp,
-		SecondTelephone:         body.SecondTelephone,
-		SecondTelephoneWhatsapp: body.SecondTelephoneWhatsapp,
-		Linkedin:                body.Linkedin,
-		Instagram:               body.Instagram,
-		Facebook:                body.Facebook,
-		IdentificationNumber:    body.IdentificationNumber,
-		IdentificationType:      body.IdentificationType,
+		ID:    id,
+		Name:  body.Name,
+		Email: body.Email,
+		Phone: body.Phone,
+		Role:  body.Role, // *string, o Service lida com a conversão e fallback para RoleClient
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -112,71 +104,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ── DTOs ─────────────────────────────────────────────────────────────────────
 
-type createUserRequest struct {
-	Email                   string  `json:"email"`
-	Name                    *string `json:"name"`
-	Telephone               *string `json:"telephone"`
-	TelephoneWhatsapp       *bool   `json:"telephone_whatsapp"`
-	SecondTelephone         *string `json:"second_telephone"`
-	SecondTelephoneWhatsapp *bool   `json:"second_telephone_whatsapp"`
-	Linkedin                *string `json:"linkedin"`
-	Instagram               *string `json:"instagram"`
-	Facebook                *string `json:"facebook"`
-	IdentificationNumber    *string `json:"identification_number"`
-	IdentificationType      *string `json:"identification_type"`
-	Role                    *string `json:"role"`
-}
-
-type updateUserRequest struct {
-	Name                    *string `json:"name"`
-	Telephone               *string `json:"telephone"`
-	TelephoneWhatsapp       *bool   `json:"telephone_whatsapp"`
-	SecondTelephone         *string `json:"second_telephone"`
-	SecondTelephoneWhatsapp *bool   `json:"second_telephone_whatsapp"`
-	Linkedin                *string `json:"linkedin"`
-	Instagram               *string `json:"instagram"`
-	Facebook                *string `json:"facebook"`
-	IdentificationNumber    *string `json:"identification_number"`
-	IdentificationType      *string `json:"identification_type"`
-}
-
-type userResponse struct {
-	ID                      string  `json:"id"`
-	Email                   string  `json:"email"`
-	Name                    *string `json:"name"`
-	EmailVerified           bool    `json:"email_verified"`
-	Telephone               *string `json:"telephone"`
-	TelephoneWhatsapp       bool    `json:"telephone_whatsapp"`
-	SecondTelephone         *string `json:"second_telephone"`
-	SecondTelephoneWhatsapp bool    `json:"second_telephone_whatsapp"`
-	Linkedin                *string `json:"linkedin"`
-	Instagram               *string `json:"instagram"`
-	Facebook                *string `json:"facebook"`
-	IdentificationNumber    *string `json:"identification_number"`
-	IdentificationType      *string `json:"identification_type"`
-	Role                    string  `json:"role"`
-}
-
-func toResponse(u *domain.User) userResponse {
-	return userResponse{
-		ID:                      string(u.ID),
-		Email:                   u.Email,
-		Name:                    u.Name,
-		EmailVerified:           u.EmailVerified,
-		Telephone:               u.Telephone,
-		TelephoneWhatsapp:       u.TelephoneWhatsapp,
-		SecondTelephone:         u.SecondTelephone,
-		SecondTelephoneWhatsapp: u.SecondTelephoneWhatsapp,
-		Linkedin:                u.Linkedin,
-		Instagram:               u.Instagram,
-		Facebook:                u.Facebook,
-		IdentificationNumber:    u.IdentificationNumber,
-		IdentificationType:      u.IdentificationType,
-		Role:                    string(u.Role),
-	}
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -186,16 +114,15 @@ func respond(w http.ResponseWriter, status int, body any) {
 	json.NewEncoder(w).Encode(body)
 }
 
-func derefBool(b *bool) bool {
-	if b == nil {
-		return false
-	}
-	return *b
-}
-
 func derefString(s *string, fallback string) string {
 	if s == nil {
 		return fallback
 	}
 	return *s
+}
+func derefRole(role *domain.Role, fallback domain.Role) domain.Role {
+	if role == nil {
+		return fallback
+	}
+	return *role
 }

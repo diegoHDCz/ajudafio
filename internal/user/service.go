@@ -34,18 +34,10 @@ func (s *service) GetByEmail(ctx context.Context, email string) (*domain.User, e
 
 func (s *service) Create(ctx context.Context, input ports.CreateUserInput) (*domain.User, error) {
 	user := &domain.User{
-		Email:                   input.Email,
-		Name:                    input.Name,
-		Telephone:               input.Telephone,
-		TelephoneWhatsapp:       input.TelephoneWhatsapp,
-		SecondTelephone:         input.SecondTelephone,
-		SecondTelephoneWhatsapp: input.SecondTelephoneWhatsapp,
-		Linkedin:                input.Linkedin,
-		Instagram:               input.Instagram,
-		Facebook:                input.Facebook,
-		IdentificationNumber:    input.IdentificationNumber,
-		IdentificationType:      input.IdentificationType,
-		Role:                    input.Role,
+		Email: input.Email,
+		Name:  input.Name,  // Agora é string direta
+		Phone: input.Phone, // Mapeado para o novo nome
+		Role:  input.Role,
 	}
 
 	created, err := s.repo.Create(ctx, user)
@@ -61,35 +53,18 @@ func (s *service) Update(ctx context.Context, input ports.UpdateUserInput) (*dom
 		return nil, fmt.Errorf("user.Update: %w", err)
 	}
 
+	// Atualizações parciais (Somente se o ponteiro não for nil)
 	if input.Name != nil {
-		existing.Name = input.Name
+		existing.Name = *input.Name
 	}
-	if input.Telephone != nil {
-		existing.Telephone = input.Telephone
+	if input.Email != nil {
+		existing.Email = *input.Email
 	}
-	if input.TelephoneWhatsapp != nil {
-		existing.TelephoneWhatsapp = *input.TelephoneWhatsapp
+	if input.Phone != nil {
+		existing.Phone = input.Phone
 	}
-	if input.SecondTelephone != nil {
-		existing.SecondTelephone = input.SecondTelephone
-	}
-	if input.SecondTelephoneWhatsapp != nil {
-		existing.SecondTelephoneWhatsapp = *input.SecondTelephoneWhatsapp
-	}
-	if input.Linkedin != nil {
-		existing.Linkedin = input.Linkedin
-	}
-	if input.Instagram != nil {
-		existing.Instagram = input.Instagram
-	}
-	if input.Facebook != nil {
-		existing.Facebook = input.Facebook
-	}
-	if input.IdentificationNumber != nil {
-		existing.IdentificationNumber = input.IdentificationNumber
-	}
-	if input.IdentificationType != nil {
-		existing.IdentificationType = input.IdentificationType
+	if input.Role != nil {
+		existing.Role = *input.Role
 	}
 
 	updated, err := s.repo.Update(ctx, existing)

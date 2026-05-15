@@ -31,6 +31,41 @@ services:
       timeout: 5s
       retries: 5
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: ajudafio_keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HEALTH_ENABLED: "true"
+      KC_HEALTH_PROBE_INTERVAL: "10s"
+      KC_HEALTH_PROBE_TIMEOUT: "5s"
+      KC_HEALTH_PROBE_RETRIES: "15"
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  krakend:
+    image: devopsfaith/krakend:2.7
+    container_name: ajudafio_krakend
+    volumes:
+      - ./config/krakend:/etc/krakend
+    ports:
+      - "${KRAKEND_PORT:-8090}:8080"
+    depends_on:
+      api:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
   migrate:
     image: migrate/migrate:v4.17.1
     container_name: ajudafio_migrate
