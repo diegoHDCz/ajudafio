@@ -1,0 +1,58 @@
+### -- Variables -------------------------------------------------------
+@baseUrl = http://localhost:8080
+@access_token = {{$dotenv ACCESS_TOKEN}}
+@professionalId = {{$dotenv PROFESSIONAL_ID}}
+@userId = {{$dotenv USER_ID}}
+
+### -- GET /professionals (list with filters) --------------------------
+GET {{baseUrl}}/professionals
+Content-Type: application/json
+
+### -- GET /professionals?city=&state= (filtered) ---------------------
+GET {{baseUrl}}/professionals?city=Curitiba&state=PR&day_of_week=monday&shift=morning
+Content-Type: application/json
+
+### -- GET /professionals/{id} ----------------------------------------
+GET {{baseUrl}}/professionals/{{professionalId}}
+Content-Type: application/json
+
+### -- GET /professionals/user/{userID} (auth required) ---------------
+GET {{baseUrl}}/professionals/user/{{userId}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+### -- POST /professionals (create, auth required) --------------------
+POST {{baseUrl}}/professionals
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "user_id": "{{userId}}",
+  "license_number": "CRM-12345",
+  "category": "medico",
+  "years_of_experience": 5,
+  "resume": "Médico especialista em clínica geral.",
+  "metadata": {
+    "specialties": ["clinica_geral"],
+    "languages": ["pt-BR"]
+  }
+}
+
+### -- PATCH /professionals/{id} (update, auth required) --------------
+PATCH {{baseUrl}}/professionals/{{professionalId}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "license_number": "CRM-99999",
+  "years_of_experience": 8,
+  "verified": true,
+  "resume": "Médico com 8 anos de experiência.",
+  "metadata": {
+    "specialties": ["clinica_geral", "geriatria"]
+  }
+}
+
+### -- DELETE /professionals/{id} (auth required) ---------------------
+DELETE {{baseUrl}}/professionals/{{professionalId}}
+Authorization: Bearer {{access_token}}

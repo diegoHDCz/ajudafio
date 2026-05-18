@@ -19,6 +19,9 @@ import (
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
 	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	professional "github.com/diegoHDCz/ajudafio/internal/professional"
+	professionalhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
+	professionalpostgres "github.com/diegoHDCz/ajudafio/internal/professional/adapters/postgres"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
@@ -52,7 +55,7 @@ func main() {
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
 	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
 	config, _ := authRepo.GetKeycloakConfig()
-	authSvc := authhttp.NewHandler(*authRepo, &config,userSvc)
+	authSvc := authhttp.NewHandler(*authRepo, &config, userSvc)
 
 	// ── Wire: middleware request ──────────────────────────────────────────────────────
 	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), "http://localhost:8180/realms/ajudafio", "app-ajudafio")
@@ -60,6 +63,11 @@ func main() {
 		slog.Error("failed to initialize auth middleware", "error", err)
 		os.Exit(1)
 	}
+
+	// ── Wire: professional slice ────────────────────────────────────────────────────────────────
+	professionalRepo := professionalpostgres.NewRepository(db)
+	professionalSvc := professional.NewProfessionalService(professionalRepo)
+	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc)
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -75,6 +83,18 @@ func main() {
 	})
 
 	r.Mount("/auth", authhttp.NewRouter(authSvc))
+
+	r.Route("/professionals", func(r chi.Router) {
+		r.Get("/", professionalHandler.FindWithFilters)
+		r.Get("/{id}", professionalHandler.GetByID)
+		r.Group(func(r chi.Router) {
+			r.Use(authMW.RequestAuth)
+			r.Get("/user/{userID}", professionalHandler.GetByUserID)
+			r.Post("/", professionalHandler.Create)
+			r.Patch("/{id}", professionalHandler.Update)
+			r.Delete("/{id}", professionalHandler.Delete)
+		})
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW.RequestAuth)
