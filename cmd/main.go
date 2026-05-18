@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,18 +17,15 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
-	"github.com/diegoHDCz/ajudafio/internal/auth"
-	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
-	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
+	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
 
 	// ── Config ────────────────────────────────────────────────────────────────
 	fmt.Println("Loading configuration...")
@@ -48,9 +46,13 @@ func main() {
 	// }
 
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
-	authRepo := authpostgres.NewRepository(db)
-	authSvc := auth.NewAuthService(authRepo)
-	authHandler := authhttp.NewHandler(authSvc)
+	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
+
+	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), "http://localhost:8180/realms/ajudafio", "app-ajudafio")
+	if err != nil {
+		slog.Error("failed to initialize auth middleware", "error", err)
+		os.Exit(1)
+	}
 
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
@@ -65,14 +67,21 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
-	r.Use(authmiddleware.Extract)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	config, _ := authRepo.GetKeycloakConfig()
+	log.Printf("Keycloak Config: %+v", config)
 
-	r.Mount("/auth", authhttp.NewRouter(authHandler))
-	r.Mount("/users", userhttp.NewRouter(userHandler))
+	r.Get("/auth", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, config.AuthCodeURL("exemplo"), http.StatusFound)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMW.RequestAuth)
+		r.Mount("/users", userhttp.NewRouter(userHandler))
+	})
 
 	// ── Server ────────────────────────────────────────────────────────────────
 	srv := &http.Server{

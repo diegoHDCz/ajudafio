@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/go-chi/chi/v5"
@@ -19,11 +21,26 @@ func NewHandler(svc ports.UserService) *Handler {
 
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
+	r.Get("/me", h.Me)
 	r.Get("/{id}", h.GetByID)
 	r.Post("/", h.Create)
 	r.Patch("/{id}", h.Update)
 	r.Delete("/{id}", h.Delete)
 	return r
+}
+
+// GET /users/me
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	claims := authmiddleware.GetClaims(r.Context())
+	log.Printf("Claims %v", claims)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	respond(w, http.StatusOK, meResponse{
+		Name:  claims.Name,
+		Email: claims.Email,
+	})
 }
 
 // GET /users/{id}
@@ -103,8 +120,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
-
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

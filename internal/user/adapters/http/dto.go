@@ -2,6 +2,11 @@ package http
 
 import "github.com/diegoHDCz/ajudafio/internal/user/domain"
 
+type meResponse struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 type createUserRequest struct {
 	Email string       `json:"email"`
 	Name  string       `json:"name"`

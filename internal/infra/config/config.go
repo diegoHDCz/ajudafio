@@ -3,6 +3,9 @@ package config
 import (
 	"fmt"
 	"os"
+
+	"github.com/joho/godotenv"
+	"github.com/labstack/gommon/log"
 )
 
 type Config struct {
@@ -12,20 +15,20 @@ type Config struct {
 }
 
 func Load() *Config {
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	panic(fmt.Sprintf("config: failed to load environment variables: %v", err))
-	// }
+	err := godotenv.Load()
+	if err != nil {
+		panic("pqp")
+	}
 	return &Config{
 		AppPort:     getEnv("APP_PORT", "8080"),
-		DatabaseURL: mustGetEnv("DATABASE_DOCKER_URL"),
+		DatabaseURL: mustGetEnv("DATABASE_URL"),
 		// MigrationsPath: getEnv("MIGRATIONS_PATH", "./migrations"),
 	}
 }
 
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
-		fmt.Printf("config: using environment variable %q=%q\n", key, v)
+		log.Printf("config: using environment variable %q=%q\n", key, v)
 		return v
 	}
 	return fallback
@@ -33,9 +36,11 @@ func getEnv(key, fallback string) string {
 
 func mustGetEnv(key string) string {
 	v := os.Getenv(key)
-	fmt.Printf("config: using environment variable %q=%q\n", key, v)
+	log.Printf("config: using environment variable %q=%q", key, v)
 	if v == "" {
-		panic(fmt.Sprintf("config: environment variable %q is required", key))
+		msg := fmt.Sprintf("config: environment variable %q is required", key)
+		log.Print(msg)
+		panic(msg)
 	}
 	return v
 }

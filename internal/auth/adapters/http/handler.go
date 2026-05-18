@@ -4,58 +4,65 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/diegoHDCz/ajudafio/internal/auth"
-	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	repository "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	"github.com/go-chi/chi/v5"
+	"github.com/labstack/gommon/log"
+	"golang.org/x/oauth2"
 )
 
 type Handler struct {
-	svc *auth.AuthService
+	rp repository.KeycloakRepository
 }
 
-func NewHandler(svc *auth.AuthService) *Handler {
-	return &Handler{svc: svc}
+var (
+	state string
+)
+
+func NewHandler(rp repository.KeycloakRepository) *Handler {
+	state = "exemplo"
+	return &Handler{rp: rp}
 }
 
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
-	r.Use(authmiddleware.Authenticate(h.svc))
 
-	r.Get("/me", h.Me)
-	r.Get("/me/accounts", h.MyAccounts)
+	r.Get("/callback", h.Callback)
 
 	return r
 }
 
-// GET /auth/me
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	user, ok := authmiddleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+// GET /auth/callback
+func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("state") != state {
+		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
-	respond(w, http.StatusOK, toMeResponse(user))
-}
+	config, err := h.rp.GetKeycloakConfig()
+	oauth2Token, err := config.Exchange(r.Context(), r.URL.Query().Get("code"))
 
-// GET /auth/me/accounts
-func (h *Handler) MyAccounts(w http.ResponseWriter, r *http.Request) {
-	user, ok := authmiddleware.GetUser(r.Context())
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	accounts, err := h.svc.GetAccountsByUser(r.Context(), string(user.ID))
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "Failed to exchange code", http.StatusInternalServerError)
 		return
 	}
 
-	resp := make([]accountResponse, len(accounts))
-	for i, a := range accounts {
-		resp[i] = toAccountResponse(a)
+	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	log.Printf("rawIDToken: %s", rawIDToken)
+	if !ok {
+		http.Error(w, "Failed to get ID token", http.StatusInternalServerError)
+		return
 	}
-	respond(w, http.StatusOK, resp)
+
+
+	res := struct {
+		OAuth2Token *oauth2.Token
+		rawIDToken  string
+	}{
+		OAuth2Token: oauth2Token,
+		rawIDToken:  rawIDToken,
+	}
+
+	respond(w, http.StatusOK, res)
+
 }
 
 func respond(w http.ResponseWriter, status int, body any) {

@@ -1,17 +1,17 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ajudafio_api
-    restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:8080"
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: ajudafio_api
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${APP_PORT:-8080}:8080"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -43,7 +43,8 @@ services:
       KC_HEALTH_PROBE_TIMEOUT: "5s"
       KC_HEALTH_PROBE_RETRIES: "15"
     volumes:
-      - ./config/keycloak:/opt/keycloak/data/import
+      - ./ajudafio-theme/theme/ajudafio:/opt/keycloak/themes/ajudafio
+      - keycloak_data:/opt/keycloak/data
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
     healthcheck:
@@ -52,20 +53,6 @@ services:
       timeout: 5s
       retries: 15
       start_period: 60s
-
-  krakend:
-    image: devopsfaith/krakend:2.7
-    container_name: ajudafio_krakend
-    volumes:
-      - ./config/krakend:/etc/krakend
-    ports:
-      - "${KRAKEND_PORT:-8090}:8080"
-    depends_on:
-      api:
-        condition: service_started
-      keycloak:
-        condition: service_healthy
-
   migrate:
     image: migrate/migrate:v4.17.1
     container_name: ajudafio_migrate
@@ -83,3 +70,4 @@ services:
 
 volumes:
   postgres_data:
+  keycloak_data:
