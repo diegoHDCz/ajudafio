@@ -57,8 +57,6 @@ func (m *AuthMiddleware) RequestAuth(next http.Handler) http.Handler {
 	})
 }
 
-var jwks keyfunc.Keyfunc
-
 func InitJWKS(ctx context.Context) (keyfunc.Keyfunc, error) {
 	jwksURL := "http://localhost:8180/realms/ajudafio/protocol/openid-connect/certs"
 

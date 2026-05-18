@@ -44,21 +44,22 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
+	// ── Wire: user slice ──────────────────────────────────────────────────────
+	userRepo := userpostgres.NewRepository(db)
+	userSvc := user.NewService(userRepo)
+	userHandler := userhttp.NewHandler(userSvc)
+
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
 	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
 	config, _ := authRepo.GetKeycloakConfig()
-	authSvc := authhttp.NewHandler(*authRepo, &config)
+	authSvc := authhttp.NewHandler(*authRepo, &config,userSvc)
 
+	// ── Wire: middleware request ──────────────────────────────────────────────────────
 	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), "http://localhost:8180/realms/ajudafio", "app-ajudafio")
 	if err != nil {
 		slog.Error("failed to initialize auth middleware", "error", err)
 		os.Exit(1)
 	}
-
-	// ── Wire: user slice ──────────────────────────────────────────────────────
-	userRepo := userpostgres.NewRepository(db)
-	userSvc := user.NewService(userRepo)
-	userHandler := userhttp.NewHandler(userSvc)
 
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
