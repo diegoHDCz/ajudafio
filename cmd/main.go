@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,9 +16,9 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
+	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
 	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
-
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
@@ -47,6 +46,8 @@ func main() {
 
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
 	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
+	config, _ := authRepo.GetKeycloakConfig()
+	authSvc := authhttp.NewHandler(*authRepo, &config)
 
 	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), "http://localhost:8180/realms/ajudafio", "app-ajudafio")
 	if err != nil {
@@ -71,12 +72,8 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	config, _ := authRepo.GetKeycloakConfig()
-	log.Printf("Keycloak Config: %+v", config)
 
-	r.Get("/auth", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, config.AuthCodeURL("exemplo"), http.StatusFound)
-	})
+	r.Mount("/auth", authhttp.NewRouter(authSvc))
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW.RequestAuth)

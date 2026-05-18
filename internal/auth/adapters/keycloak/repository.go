@@ -3,14 +3,10 @@ package keycloak
 import (
 	"context"
 	"log"
+	"os"
 
 	oidc "github.com/coreos/go-oidc"
 	"golang.org/x/oauth2"
-)
-
-var (
-	clientID     = "app-ajudafio"
-	clientSecret = "HJt6rlZCK0W9smwde8NMW9Z37p5E7Hd4"
 )
 
 type KeycloakRepository struct {
@@ -20,7 +16,7 @@ type KeycloakRepository struct {
 
 func NewKeycloakRepository(baseURL string) *KeycloakRepository {
 	return &KeycloakRepository{
-		client:  clientID,
+		client:  os.Getenv("CLIENT_ID"),
 		baseURL: baseURL,
 	}
 }
@@ -32,9 +28,13 @@ func (k *KeycloakRepository) GetKeycloakConfig() (oauth2.Config, error) {
 		log.Fatalf("Failed to create provider: %v", err)
 
 	}
+	clientid := os.Getenv("CLIENT_ID")
+
+	clientsecret := os.Getenv("CLIENT_SECRET")
+
 	config := oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
+		ClientID:     clientid,
+		ClientSecret: clientsecret,
 		Endpoint:     provicer.Endpoint(),
 		RedirectURL:  "http://localhost:8080/auth/callback",
 		Scopes:       []string{"openid", "profile", "email"},

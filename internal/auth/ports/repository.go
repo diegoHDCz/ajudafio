@@ -74,7 +74,7 @@ type Verification struct {
 }
 type AuthRepository interface {
 
-	FindOrCreateUser(ctx context.Context, claims authdomain.Claims) (*userdomain.User, error)
+	FindOrCreateUser(ctx context.Context, claims authdomain.JWTClaims) (*userdomain.User, error)
 
 	GetAccountByProvider(ctx context.Context, providerID, accountID string) (*Account, error)
 

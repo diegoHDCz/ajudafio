@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
@@ -32,7 +31,7 @@ func NewRouter(h *Handler) http.Handler {
 // GET /users/me
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims := authmiddleware.GetClaims(r.Context())
-	log.Printf("Claims %v", claims)
+
 	if claims == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return

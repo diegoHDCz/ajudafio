@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+
 	"net/http"
 
 	repository "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
@@ -11,21 +12,22 @@ import (
 )
 
 type Handler struct {
-	rp repository.KeycloakRepository
+	rp     repository.KeycloakRepository
+	config *oauth2.Config
 }
 
 var (
 	state string
 )
 
-func NewHandler(rp repository.KeycloakRepository) *Handler {
+func NewHandler(rp repository.KeycloakRepository, config *oauth2.Config) *Handler {
 	state = "exemplo"
-	return &Handler{rp: rp}
+	return &Handler{rp: rp, config: config}
 }
 
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
-
+	r.Get("/login", h.Login)
 	r.Get("/callback", h.Callback)
 
 	return r
@@ -37,21 +39,21 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid state", http.StatusBadRequest)
 		return
 	}
-	config, err := h.rp.GetKeycloakConfig()
-	oauth2Token, err := config.Exchange(r.Context(), r.URL.Query().Get("code"))
 
+	oauth2Token, err := h.config.Exchange(r.Context(), r.URL.Query().Get("code"))
 	if err != nil {
-		http.Error(w, "Failed to exchange code", http.StatusInternalServerError)
+
+		http.Error(w, "Failed to validate token", http.StatusInternalServerError)
 		return
 	}
 
 	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-	log.Printf("rawIDToken: %s", rawIDToken)
 	if !ok {
 		http.Error(w, "Failed to get ID token", http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("teste raw %v", rawIDToken)
 
 	res := struct {
 		OAuth2Token *oauth2.Token
@@ -63,6 +65,10 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	respond(w, http.StatusOK, res)
 
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, h.config.AuthCodeURL("exemplo"), http.StatusFound)
 }
 
 func respond(w http.ResponseWriter, status int, body any) {
