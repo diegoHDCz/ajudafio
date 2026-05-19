@@ -16,6 +16,9 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 
+	address "github.com/diegoHDCz/ajudafio/internal/address"
+	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
+	addresspostgres "github.com/diegoHDCz/ajudafio/internal/address/adapters/postgres"
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
 	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
@@ -76,6 +79,11 @@ func main() {
 	avalabilityRepo := avalabilityRepo.NewRepository(db)
 	availabilitySvc := availability.NewAvailabilityService(avalabilityRepo)
 	availabilityHandler := availabilityhttp.NewAvailabilityHandler(availabilitySvc)
+
+	// ── Wire: address slice ────────────────────────────────────────────────────────────────
+	addressRepo := addresspostgres.NewAddressRepository(db)
+	addressSvc := address.NewAddressService(addressRepo)
+	addressHandler := addresshttp.NewAddressHandler(addressSvc)
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -109,6 +117,7 @@ func main() {
 		r.Use(authMW.RequestAuth)
 		r.Mount("/users", userhttp.NewRouter(userHandler))
 		r.Mount("/availabilities", availabilityhttp.NewAvailabilityRouter(availabilityHandler))
+		r.Mount("/addresses", addresshttp.NewRouter(addressHandler))
 	})
 
 	// ── Server ────────────────────────────────────────────────────────────────
