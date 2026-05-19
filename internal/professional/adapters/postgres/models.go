@@ -27,8 +27,8 @@ type Address struct {
 type Availability struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      string      `json:"day_of_week"`
-	Shift          *string     `json:"shift"`
+	DayOfWeek      []string    `json:"day_of_week"`
+	Shift          []string    `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }

@@ -48,6 +48,7 @@ migrate-create: ## Create a new migration (usage: make migrate-create NAME=creat
 sqlc: ## Regenerate type-safe Go code from SQL queries
 		sqlc generate -f internal/user/sqlc.yaml
 		sqlc generate -f internal/professional/sqlc.yaml
+		sqlc generate -f internal/availability/sqlc.yaml
 
 # ── Docker ─────────────────────────────────────────────────────────────────────
  
@@ -75,4 +76,12 @@ docker-migrate: ## Run migrations inside Docker (uses migrate profile)
 .PHONY: run
 run: ## Run the API locally (requires .env file)
 	go run cmd/main.go
+
+.PHONY: test
+test: ## Run all unit tests
+	go test ./... -v -count=1
+
+.PHONY: test-cover
+test-cover: ## Run tests with coverage report
+	go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out
 

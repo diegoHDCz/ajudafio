@@ -63,7 +63,7 @@ func InitJWKS(ctx context.Context) (keyfunc.Keyfunc, error) {
 	var err error
 	jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
 	if err != nil {
-		log.Printf("failed to create JWKS from URL: %w", err)
+		log.Printf("failed to create JWKS from URL: %v", err)
 		return nil, err
 	}
 	return jwks, nil
@@ -98,6 +98,12 @@ func extractBearer(r *http.Request) (string, error) {
 func GetClaims(ctx context.Context) *domain.JWTClaims {
 	claims, _ := ctx.Value(claimsKey).(*domain.JWTClaims)
 	return claims
+}
+
+// WithClaims returns a context carrying the given JWT claims.
+// Intended for use in tests to simulate an authenticated request.
+func WithClaims(ctx context.Context, claims *domain.JWTClaims) context.Context {
+	return context.WithValue(ctx, claimsKey, claims)
 }
 
 type httpError struct{ msg string }

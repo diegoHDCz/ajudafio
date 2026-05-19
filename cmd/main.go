@@ -19,6 +19,9 @@ import (
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
 	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	availability "github.com/diegoHDCz/ajudafio/internal/availability"
+	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
+	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
 	professional "github.com/diegoHDCz/ajudafio/internal/professional"
 	professionalhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
 	professionalpostgres "github.com/diegoHDCz/ajudafio/internal/professional/adapters/postgres"
@@ -69,6 +72,10 @@ func main() {
 	professionalSvc := professional.NewProfessionalService(professionalRepo)
 	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc)
 
+	// ── Wire: avaliabilities slice ────────────────────────────────────────────────────────────────
+	avalabilityRepo := avalabilityRepo.NewRepository(db)
+	availabilitySvc := availability.NewAvailabilityService(avalabilityRepo)
+	availabilityHandler := availabilityhttp.NewAvailabilityHandler(availabilitySvc)
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -92,13 +99,16 @@ func main() {
 			r.Get("/user/{userID}", professionalHandler.GetByUserID)
 			r.Post("/", professionalHandler.Create)
 			r.Patch("/{id}", professionalHandler.Update)
+
 			r.Delete("/{id}", professionalHandler.Delete)
+
 		})
 	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW.RequestAuth)
 		r.Mount("/users", userhttp.NewRouter(userHandler))
+		r.Mount("/availabilities", availabilityhttp.NewAvailabilityRouter(availabilityHandler))
 	})
 
 	// ── Server ────────────────────────────────────────────────────────────────
