@@ -21,6 +21,9 @@ import (
 	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	addresspostgres "github.com/diegoHDCz/ajudafio/internal/address/adapters/postgres"
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
+	contract "github.com/diegoHDCz/ajudafio/internal/contract"
+	contracthttp "github.com/diegoHDCz/ajudafio/internal/contract/adapters/http"
+	contractpostgres "github.com/diegoHDCz/ajudafio/internal/contract/adapters/postgres"
 	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
@@ -89,6 +92,12 @@ func main() {
 	addressRepo := addresspostgres.NewAddressRepository(db)
 	addressSvc := address.NewAddressService(addressRepo)
 	addressHandler := addresshttp.NewAddressHandler(addressSvc, validator)
+
+	// ── Wire: contract slice ────────────────────────────────────────────────────────────────
+	contractRepo := contractpostgres.NewRepository(db)
+	contractSvc := contract.NewContractService(contractRepo)
+	contractHandler := contracthttp.NewContractHandler(contractSvc, validator)
+
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -123,6 +132,7 @@ func main() {
 		r.Mount("/users", userhttp.NewRouter(userHandler))
 		r.Mount("/availabilities", availabilityhttp.NewAvailabilityRouter(availabilityHandler))
 		r.Mount("/addresses", addresshttp.NewRouter(addressHandler))
+		r.Mount("/contracts", contracthttp.NewRouter(contractHandler))
 	})
 
 	// ── Server ────────────────────────────────────────────────────────────────
