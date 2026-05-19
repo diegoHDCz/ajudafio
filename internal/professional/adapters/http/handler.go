@@ -6,15 +6,17 @@ import (
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/professional/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
 )
 
 type ProfessionalHandler struct {
-	svc ports.ProfessionalService
+	svc       ports.ProfessionalService
+	validator *shared.Validator
 }
 
-func NewProfessionalHandler(svc ports.ProfessionalService) *ProfessionalHandler {
-	return &ProfessionalHandler{svc: svc}
+func NewProfessionalHandler(svc ports.ProfessionalService, validator *shared.Validator) *ProfessionalHandler {
+	return &ProfessionalHandler{svc: svc, validator: validator}
 }
 
 func NewRouter(handler *ProfessionalHandler) http.Handler {
@@ -75,6 +77,25 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *ProfessionalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) {
+		p, err := h.svc.GetByID(r.Context(), id)
+		if err != nil {
+			http.Error(w, "professional not found", http.StatusNotFound)
+			return
+		}
+		if !h.validator.ValidateSameUserID(r.Context(), claims.Email, p.UserID) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
 	var body updateProfessionalRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -111,15 +132,7 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isAdmin := false
-	for _, role := range claims.RealmAccess.Roles {
-		if role == "admin" {
-			isAdmin = true
-			break
-		}
-	}
-
-	if !isAdmin && claims.Sub != p.UserID {
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, p.UserID) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}

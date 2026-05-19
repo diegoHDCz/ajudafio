@@ -15,6 +15,7 @@ import (
 
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 
 	address "github.com/diegoHDCz/ajudafio/internal/address"
 	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
@@ -56,7 +57,11 @@ func main() {
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
 	userSvc := user.NewService(userRepo)
-	userHandler := userhttp.NewHandler(userSvc)
+
+	// ── Wire: shared validator ─────────────────────────────────────────────────
+	validator := shared.NewValidator(userSvc)
+
+	userHandler := userhttp.NewHandler(userSvc, validator)
 
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
 	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
@@ -73,17 +78,17 @@ func main() {
 	// ── Wire: professional slice ────────────────────────────────────────────────────────────────
 	professionalRepo := professionalpostgres.NewRepository(db)
 	professionalSvc := professional.NewProfessionalService(professionalRepo)
-	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc)
+	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc, validator)
 
 	// ── Wire: avaliabilities slice ────────────────────────────────────────────────────────────────
 	avalabilityRepo := avalabilityRepo.NewRepository(db)
 	availabilitySvc := availability.NewAvailabilityService(avalabilityRepo)
-	availabilityHandler := availabilityhttp.NewAvailabilityHandler(availabilitySvc)
+	availabilityHandler := availabilityhttp.NewAvailabilityHandler(availabilitySvc, validator, professionalSvc)
 
 	// ── Wire: address slice ────────────────────────────────────────────────────────────────
 	addressRepo := addresspostgres.NewAddressRepository(db)
 	addressSvc := address.NewAddressService(addressRepo)
-	addressHandler := addresshttp.NewAddressHandler(addressSvc)
+	addressHandler := addresshttp.NewAddressHandler(addressSvc, validator)
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 

@@ -5,17 +5,19 @@ import (
 	"net/http"
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
-	svc ports.UserService
+	svc       ports.UserService
+	validator *shared.Validator
 }
 
-func NewHandler(svc ports.UserService) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc ports.UserService, validator *shared.Validator) *Handler {
+	return &Handler{svc: svc, validator: validator}
 }
 
 func NewRouter(h *Handler) http.Handler {
@@ -63,7 +65,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Como no banco Name é NOT NULL, validamos aqui ou deixamos o Service tratar
 	if body.Name == "" || body.Email == "" {
 		http.Error(w, "name and email are required", http.StatusBadRequest)
 		return
@@ -87,6 +88,17 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
 
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, string(id)) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	var body updateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -98,7 +110,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		Name:  body.Name,
 		Email: body.Email,
 		Phone: body.Phone,
-		Role:  body.Role, // *string, o Service lida com a conversão e fallback para RoleClient
+		Role:  body.Role,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -111,6 +123,17 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // DELETE /users/{id}
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, string(id)) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 
 	if err := h.svc.Delete(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -128,12 +151,6 @@ func respond(w http.ResponseWriter, status int, body any) {
 	json.NewEncoder(w).Encode(body)
 }
 
-func derefString(s *string, fallback string) string {
-	if s == nil {
-		return fallback
-	}
-	return *s
-}
 func derefRole(role *domain.Role, fallback domain.Role) domain.Role {
 	if role == nil {
 		return fallback

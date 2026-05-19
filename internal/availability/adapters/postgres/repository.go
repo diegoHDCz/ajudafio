@@ -22,6 +22,25 @@ func NewRepository(db *pgxpool.Pool) ports.AvailabilityRepository {
 
 }
 
+// GetByID implements [ports.AvailabilityRepository].
+func (r *repository) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
+	availabilityID, err := shared.ParseUUID(id)
+	if err != nil {
+		return nil, err
+	}
+	row, err := r.queries.GetAvailabilityByID(ctx, availabilityID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.Availability{
+		ID:             row.ID.String(),
+		ProfessionalID: row.ProfessionalID.String(),
+		StartHour:      row.StartHour,
+		EndHour:        row.EndHour,
+		DayOfWeek:      shared.SliceToDayOfWeek(row.DayOfWeek),
+	}, nil
+}
+
 // Create implements [ports.AvailabilityRepository].
 func (r *repository) Create(ctx context.Context, availability *domain.Availability) (*domain.Availability, error) {
 	professionalID, err := shared.ParseUUID(availability.ProfessionalID)

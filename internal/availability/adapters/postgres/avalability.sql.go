@@ -11,6 +11,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getAvailabilityByID = `-- name: GetAvailabilityByID :one
+SELECT id, professional_id, day_of_week, start_hour, end_hour
+FROM availabilities
+WHERE id = $1
+`
+
+type GetAvailabilityByIDRow struct {
+	ID             pgtype.UUID `json:"id"`
+	ProfessionalID pgtype.UUID `json:"professional_id"`
+	DayOfWeek      []string    `json:"day_of_week"`
+	StartHour      *string     `json:"start_hour"`
+	EndHour        *string     `json:"end_hour"`
+}
+
+func (q *Queries) GetAvailabilityByID(ctx context.Context, id pgtype.UUID) (GetAvailabilityByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAvailabilityByID, id)
+	var i GetAvailabilityByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProfessionalID,
+		&i.DayOfWeek,
+		&i.StartHour,
+		&i.EndHour,
+	)
+	return i, err
+}
+
 const createProfessionalAvailability = `-- name: CreateProfessionalAvailability :one
 INSERT INTO availabilities (
     professional_id,

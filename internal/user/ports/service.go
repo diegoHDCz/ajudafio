@@ -15,6 +15,7 @@ type UserService interface {
 }
 
 type CreateUserInput struct {
+	ID    string
 	Email string
 	Name  string  // Obrigatório (NOT NULL no banco)
 	Phone *string // Opcional no banco

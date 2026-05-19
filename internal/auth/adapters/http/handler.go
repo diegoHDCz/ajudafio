@@ -92,6 +92,7 @@ func (h *Handler) syncDBuser(ctx context.Context, token *oauth2.Token) error {
 
 	if err != nil || user == nil {
 		_, err = h.us.Create(ctx, ports.CreateUserInput{
+			ID:    claims.Sub,
 			Name:  claims.Name,
 			Email: claims.Email,
 			Role:  roles.RoleClient,

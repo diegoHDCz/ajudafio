@@ -12,11 +12,13 @@ LIMIT 1;
 
 -- name: CreateUser :one
 INSERT INTO users (
+  id,
   name,
   email,
   phone,
   role
 ) VALUES (
+  @id,
   @name,
   @email,
   @phone,

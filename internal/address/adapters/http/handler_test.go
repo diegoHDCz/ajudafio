@@ -15,6 +15,9 @@ import (
 	addrhttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/address/domain"
 	"github.com/diegoHDCz/ajudafio/internal/address/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
+	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
+	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
 )
 
 // --- Mock ---
@@ -64,8 +67,33 @@ func makeTestAddress() *domain.Address {
 	}
 }
 
+// stubUserSvcAddr is a minimal user service for the shared.Validator in address handler tests.
+type stubUserSvcAddr struct {
+	getByEmail func(context.Context, string) (*userdomain.User, error)
+}
+
+func (s *stubUserSvcAddr) GetByEmail(ctx context.Context, email string) (*userdomain.User, error) {
+	if s.getByEmail != nil {
+		return s.getByEmail(ctx, email)
+	}
+	return nil, errors.New("user not found")
+}
+func (s *stubUserSvcAddr) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) Delete(_ context.Context, _ userdomain.UserID) error {
+	return errors.New("not implemented")
+}
+
 func newAddrRouter(svc ports.AddressService) http.Handler {
-	return addrhttp.NewRouter(addrhttp.NewAddressHandler(svc))
+	validator := shared.NewValidator(&stubUserSvcAddr{})
+	return addrhttp.NewRouter(addrhttp.NewAddressHandler(svc, validator))
 }
 
 func adminClaims() *authdomain.JWTClaims {
@@ -313,6 +341,19 @@ func TestAddrCreate_ServiceError(t *testing.T) {
 
 // --- Update ---
 
+func TestAddrUpdate_NoClaims(t *testing.T) {
+	router := newAddrRouter(&mockAddrSvc{})
+	body, _ := json.Marshal(map[string]string{"city": "São Paulo"})
+	req := httptest.NewRequest(http.MethodPatch, "/addr-1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestAddrUpdate_Success(t *testing.T) {
 	a := makeTestAddress()
 	svc := &mockAddrSvc{
@@ -327,6 +368,7 @@ func TestAddrUpdate_Success(t *testing.T) {
 	router := newAddrRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/"+a.ID, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -339,6 +381,7 @@ func TestAddrUpdate_InvalidJSON(t *testing.T) {
 	router := newAddrRouter(&mockAddrSvc{})
 	req := httptest.NewRequest(http.MethodPatch, "/addr-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -357,6 +400,7 @@ func TestAddrUpdate_ServiceError(t *testing.T) {
 	router := newAddrRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/addr-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -378,10 +422,15 @@ func TestAddrDelete_NoClaims(t *testing.T) {
 	}
 }
 
-func TestAddrDelete_NotAdmin(t *testing.T) {
-	claims := &authdomain.JWTClaims{Sub: "user-1"}
-	router := newAddrRouter(&mockAddrSvc{})
-	req := httptest.NewRequest(http.MethodDelete, "/addr-1", nil)
+func TestAddrDelete_NotOwner(t *testing.T) {
+	a := makeTestAddress() // UserID = "user-1"
+	svc := &mockAddrSvc{
+		getByID: func(_ context.Context, _ string) (*domain.Address, error) { return a, nil },
+	}
+	// stubUserSvcAddr.getByEmail returns error → ValidateSameUserID returns false → 403
+	claims := &authdomain.JWTClaims{Email: "other@example.com"}
+	router := newAddrRouter(svc)
+	req := httptest.NewRequest(http.MethodDelete, "/"+a.ID, nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), claims))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

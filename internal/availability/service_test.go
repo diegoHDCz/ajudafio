@@ -10,12 +10,19 @@ import (
 )
 
 type mockAvailRepo struct {
+	getByID             func(context.Context, string) (*domain.Availability, error)
 	getByProfessionalID func(context.Context, string) ([]*domain.Availability, error)
 	create              func(context.Context, *domain.Availability) (*domain.Availability, error)
 	update              func(context.Context, *domain.Availability) (*domain.Availability, error)
 	delete              func(context.Context, string) error
 }
 
+func (m *mockAvailRepo) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
+	if m.getByID != nil {
+		return m.getByID(ctx, id)
+	}
+	return nil, errors.New("not found")
+}
 func (m *mockAvailRepo) GetByProfessionalID(ctx context.Context, id string) ([]*domain.Availability, error) {
 	return m.getByProfessionalID(ctx, id)
 }

@@ -11,6 +11,7 @@ import (
 
 	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
@@ -52,7 +53,7 @@ func makeTestUser() *domain.User {
 }
 
 func newUserRouter(svc ports.UserService) http.Handler {
-	return userhttp.NewRouter(userhttp.NewHandler(svc))
+	return userhttp.NewRouter(userhttp.NewHandler(svc, shared.NewValidator(svc)))
 }
 
 // --- Me ---
@@ -232,6 +233,19 @@ func TestUserCreate_ServiceError(t *testing.T) {
 
 // --- Update ---
 
+func TestUserUpdate_NoClaims(t *testing.T) {
+	router := newUserRouter(&mockUserSvc{})
+	body, _ := json.Marshal(map[string]string{"name": "X"})
+	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestUserUpdate_Success(t *testing.T) {
 	user := makeTestUser()
 	svc := &mockUserSvc{
@@ -246,6 +260,9 @@ func TestUserUpdate_Success(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/"+string(user.ID), bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -258,6 +275,9 @@ func TestUserUpdate_InvalidJSON(t *testing.T) {
 	router := newUserRouter(&mockUserSvc{})
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -276,6 +296,9 @@ func TestUserUpdate_ServiceError(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -285,6 +308,17 @@ func TestUserUpdate_ServiceError(t *testing.T) {
 }
 
 // --- Delete ---
+
+func TestUserDelete_NoClaims(t *testing.T) {
+	router := newUserRouter(&mockUserSvc{})
+	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
 
 func TestUserDelete_Success(t *testing.T) {
 	svc := &mockUserSvc{
@@ -297,6 +331,9 @@ func TestUserDelete_Success(t *testing.T) {
 	}
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -313,6 +350,9 @@ func TestUserDelete_ServiceError(t *testing.T) {
 	}
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 

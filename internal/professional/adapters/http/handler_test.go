@@ -14,6 +14,9 @@ import (
 	profhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/professional/domain"
 	"github.com/diegoHDCz/ajudafio/internal/professional/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
+	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
+	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
 )
 
 // --- Mock ---
@@ -56,8 +59,38 @@ func makeTestProfessional() *domain.Professional {
 	}
 }
 
+// stubUserSvcProf is a minimal user service for the shared.Validator in professional handler tests.
+type stubUserSvcProf struct {
+	getByEmail func(context.Context, string) (*userdomain.User, error)
+}
+
+func (s *stubUserSvcProf) GetByEmail(ctx context.Context, email string) (*userdomain.User, error) {
+	if s.getByEmail != nil {
+		return s.getByEmail(ctx, email)
+	}
+	return nil, errors.New("user not found")
+}
+func (s *stubUserSvcProf) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcProf) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcProf) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcProf) Delete(_ context.Context, _ userdomain.UserID) error {
+	return errors.New("not implemented")
+}
+
 func newProfRouter(svc ports.ProfessionalService) http.Handler {
-	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc))
+	validator := shared.NewValidator(&stubUserSvcProf{})
+	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, validator))
+}
+
+func newProfRouterWithValidator(svc ports.ProfessionalService, userSvc userports.UserService) http.Handler {
+	validator := shared.NewValidator(userSvc)
+	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, validator))
 }
 
 // --- FindWithFilters ---
@@ -324,6 +357,19 @@ func TestProfCreate_ServiceValidationError(t *testing.T) {
 
 // --- Update ---
 
+func TestProfUpdate_NoClaims(t *testing.T) {
+	router := newProfRouter(&mockProfSvc{})
+	body, _ := json.Marshal(map[string]interface{}{"license_number": "LIC-002"})
+	req := httptest.NewRequest(http.MethodPatch, "/prof-1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestProfUpdate_Success(t *testing.T) {
 	p := makeTestProfessional()
 	svc := &mockProfSvc{
@@ -338,6 +384,9 @@ func TestProfUpdate_Success(t *testing.T) {
 	router := newProfRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/"+p.ID, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -350,6 +399,9 @@ func TestProfUpdate_InvalidJSON(t *testing.T) {
 	router := newProfRouter(&mockProfSvc{})
 	req := httptest.NewRequest(http.MethodPatch, "/prof-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -368,6 +420,9 @@ func TestProfUpdate_ServiceError(t *testing.T) {
 	router := newProfRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/prof-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -409,11 +464,16 @@ func TestProfDelete_ProfessionalNotFound(t *testing.T) {
 
 func TestProfDelete_Forbidden(t *testing.T) {
 	p := makeTestProfessional() // UserID = "user-1"
-	claims := &authdomain.JWTClaims{Sub: "other-user"}
+	claims := &authdomain.JWTClaims{Email: "other@example.com"}
 	svc := &mockProfSvc{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
 	}
-	router := newProfRouter(svc)
+	userSvc := &stubUserSvcProf{
+		getByEmail: func(_ context.Context, _ string) (*userdomain.User, error) {
+			return &userdomain.User{ID: "other-user"}, nil
+		},
+	}
+	router := newProfRouterWithValidator(svc, userSvc)
 	req := httptest.NewRequest(http.MethodDelete, "/"+p.ID, nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), claims))
 	rec := httptest.NewRecorder()
@@ -426,9 +486,9 @@ func TestProfDelete_Forbidden(t *testing.T) {
 
 func TestProfDelete_OwnerCanDelete(t *testing.T) {
 	p := makeTestProfessional() // UserID = "user-1"
-	claims := &authdomain.JWTClaims{Sub: p.UserID}
+	claims := &authdomain.JWTClaims{Email: "alice@example.com"}
 	svc := &mockProfSvc{
-		getByID:  func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
+		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
 		deleteFn: func(_ context.Context, id string) error {
 			if id != p.ID {
 				t.Errorf("id: got %s, want %s", id, p.ID)
@@ -436,7 +496,12 @@ func TestProfDelete_OwnerCanDelete(t *testing.T) {
 			return nil
 		},
 	}
-	router := newProfRouter(svc)
+	userSvc := &stubUserSvcProf{
+		getByEmail: func(_ context.Context, _ string) (*userdomain.User, error) {
+			return &userdomain.User{ID: userdomain.UserID(p.UserID)}, nil
+		},
+	}
+	router := newProfRouterWithValidator(svc, userSvc)
 	req := httptest.NewRequest(http.MethodDelete, "/"+p.ID, nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), claims))
 	rec := httptest.NewRecorder()
@@ -470,7 +535,7 @@ func TestProfDelete_AdminCanDelete(t *testing.T) {
 
 func TestProfDelete_ServiceError(t *testing.T) {
 	p := makeTestProfessional()
-	claims := &authdomain.JWTClaims{Sub: p.UserID}
+	claims := &authdomain.JWTClaims{RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}}}
 	svc := &mockProfSvc{
 		getByID:  func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
 		deleteFn: func(_ context.Context, _ string) error { return errors.New("delete failed") },

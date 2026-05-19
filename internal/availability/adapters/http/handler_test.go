@@ -12,18 +12,31 @@ import (
 	avail "github.com/diegoHDCz/ajudafio/internal/availability"
 	availhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/availability/domain"
+	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	profdomain "github.com/diegoHDCz/ajudafio/internal/professional/domain"
+	profports "github.com/diegoHDCz/ajudafio/internal/professional/ports"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
+	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
+	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
 )
 
 // --- Stub repository ---
 
 type stubAvailRepo struct {
+	getByID             func(context.Context, string) (*domain.Availability, error)
 	getByProfessionalID func(context.Context, string) ([]*domain.Availability, error)
 	create              func(context.Context, *domain.Availability) (*domain.Availability, error)
 	update              func(context.Context, *domain.Availability) (*domain.Availability, error)
 	delete              func(context.Context, string) error
 }
 
+func (r *stubAvailRepo) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
+	if r.getByID != nil {
+		return r.getByID(ctx, id)
+	}
+	return nil, errors.New("not found")
+}
 func (r *stubAvailRepo) GetByProfessionalID(ctx context.Context, id string) ([]*domain.Availability, error) {
 	return r.getByProfessionalID(ctx, id)
 }
@@ -37,6 +50,52 @@ func (r *stubAvailRepo) Delete(ctx context.Context, id string) error {
 	return r.delete(ctx, id)
 }
 
+// --- Stub professional service ---
+
+type stubProfSvc struct {
+	getByID func(context.Context, string) (*profdomain.Professional, error)
+}
+
+func (s *stubProfSvc) GetByID(ctx context.Context, id string) (*profdomain.Professional, error) {
+	if s.getByID != nil {
+		return s.getByID(ctx, id)
+	}
+	return nil, errors.New("not found")
+}
+func (s *stubProfSvc) GetByUserID(_ context.Context, _ string) (*profdomain.Professional, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubProfSvc) Create(_ context.Context, _ profports.CreateProfessionalInput) (*profdomain.Professional, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubProfSvc) Update(_ context.Context, _ profports.UpdateProfessionalInput) (*profdomain.Professional, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubProfSvc) Delete(_ context.Context, _ string) error { return errors.New("not implemented") }
+func (s *stubProfSvc) FindWithFilters(_ context.Context, _ profports.ProfessionalFilters) ([]*profdomain.Professional, error) {
+	return nil, errors.New("not implemented")
+}
+
+// --- Stub user service (for validator) ---
+
+type stubUserSvcAvail struct{}
+
+func (s *stubUserSvcAvail) GetByEmail(_ context.Context, _ string) (*userdomain.User, error) {
+	return nil, errors.New("not found")
+}
+func (s *stubUserSvcAvail) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) Delete(_ context.Context, _ userdomain.UserID) error {
+	return errors.New("not implemented")
+}
+
 func makeTestAvailability() *domain.Availability {
 	shifts := []shared.Shift{shared.ShiftMorning}
 	return &domain.Availability{
@@ -47,9 +106,16 @@ func makeTestAvailability() *domain.Availability {
 	}
 }
 
+func adminClaims() *authdomain.JWTClaims {
+	return &authdomain.JWTClaims{
+		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
+	}
+}
+
 func newAvailRouter(repo *stubAvailRepo) http.Handler {
 	svc := avail.NewAvailabilityService(repo)
-	h := availhttp.NewAvailabilityHandler(svc)
+	validator := shared.NewValidator(&stubUserSvcAvail{})
+	h := availhttp.NewAvailabilityHandler(svc, validator, &stubProfSvc{})
 	return availhttp.NewAvailabilityRouter(h)
 }
 
@@ -249,6 +315,19 @@ func TestAvailHandlerCreate_ServiceError(t *testing.T) {
 
 // --- Update ---
 
+func TestAvailHandlerUpdate_NoClaims(t *testing.T) {
+	router := newAvailRouter(&stubAvailRepo{})
+	body, _ := json.Marshal(map[string]interface{}{"day_of_week": []string{"TUESDAY"}})
+	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestAvailHandlerUpdate_Success(t *testing.T) {
 	a := makeTestAvailability()
 	repo := &stubAvailRepo{
@@ -263,6 +342,7 @@ func TestAvailHandlerUpdate_Success(t *testing.T) {
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -275,6 +355,7 @@ func TestAvailHandlerUpdate_InvalidJSON(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -293,6 +374,7 @@ func TestAvailHandlerUpdate_ServiceError(t *testing.T) {
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -302,6 +384,17 @@ func TestAvailHandlerUpdate_ServiceError(t *testing.T) {
 }
 
 // --- Delete ---
+
+func TestAvailHandlerDelete_NoClaims(t *testing.T) {
+	router := newAvailRouter(&stubAvailRepo{})
+	req := httptest.NewRequest(http.MethodDelete, "/avail-1", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
 
 func TestAvailHandlerDelete_Success(t *testing.T) {
 	repo := &stubAvailRepo{
@@ -314,6 +407,7 @@ func TestAvailHandlerDelete_Success(t *testing.T) {
 	}
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodDelete, "/avail-1", nil)
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -328,6 +422,7 @@ func TestAvailHandlerDelete_ServiceError(t *testing.T) {
 	}
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodDelete, "/avail-1", nil)
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 

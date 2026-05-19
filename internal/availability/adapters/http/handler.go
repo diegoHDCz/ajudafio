@@ -4,17 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/availability"
 	"github.com/diegoHDCz/ajudafio/internal/availability/domain"
+	professionalports "github.com/diegoHDCz/ajudafio/internal/professional/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
 )
 
 type AvailabilityHandler struct {
-	s *availability.AvailabilityService
+	s               *availability.AvailabilityService
+	validator       *shared.Validator
+	professionalSvc professionalports.ProfessionalService
 }
 
-func NewAvailabilityHandler(s *availability.AvailabilityService) *AvailabilityHandler {
-	return &AvailabilityHandler{s: s}
+func NewAvailabilityHandler(s *availability.AvailabilityService, validator *shared.Validator, professionalSvc professionalports.ProfessionalService) *AvailabilityHandler {
+	return &AvailabilityHandler{s: s, validator: validator, professionalSvc: professionalSvc}
 }
 
 func NewAvailabilityRouter(h *AvailabilityHandler) http.Handler {
@@ -66,6 +71,20 @@ func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *AvailabilityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) {
+		if err := h.checkOwnership(r, id); err != nil {
+			http.Error(w, err.Error(), err.(httpErr).status)
+			return
+		}
+	}
+
 	var body updateAvailabilityRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -87,12 +106,53 @@ func (h *AvailabilityHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *AvailabilityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) {
+		if err := h.checkOwnership(r, id); err != nil {
+			http.Error(w, err.Error(), err.(httpErr).status)
+			return
+		}
+	}
+
 	if err := h.s.Delete(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// checkOwnership verifies the authenticated user owns the availability.
+func (h *AvailabilityHandler) checkOwnership(r *http.Request, availabilityID string) error {
+	claims := authmiddleware.GetClaims(r.Context())
+
+	avail, err := h.s.GetByID(r.Context(), availabilityID)
+	if err != nil {
+		return httpErr{"availability not found", http.StatusNotFound}
+	}
+
+	p, err := h.professionalSvc.GetByID(r.Context(), avail.ProfessionalID)
+	if err != nil {
+		return httpErr{"professional not found", http.StatusNotFound}
+	}
+
+	if !h.validator.ValidateSameUserID(r.Context(), claims.Email, p.UserID) {
+		return httpErr{"forbidden", http.StatusForbidden}
+	}
+	return nil
+}
+
+type httpErr struct {
+	msg    string
+	status int
+}
+
+func (e httpErr) Error() string { return e.msg }
 
 func toResponse(a *domain.Availability) availabilityResponse {
 	return availabilityResponse{

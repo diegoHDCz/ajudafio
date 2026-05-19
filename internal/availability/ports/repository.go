@@ -7,6 +7,7 @@ import (
 )
 
 type AvailabilityRepository interface {
+	GetByID(ctx context.Context, id string) (*domain.Availability, error)
 	GetByProfessionalID(ctx context.Context, professionalID string) ([]*domain.Availability, error)
 	Create(ctx context.Context, availability *domain.Availability) (*domain.Availability, error)
 	Update(ctx context.Context, availability *domain.Availability) (*domain.Availability, error)

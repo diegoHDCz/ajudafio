@@ -106,6 +106,16 @@ func WithClaims(ctx context.Context, claims *domain.JWTClaims) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)
 }
 
+// IsAdmin reports whether the claims include the "admin" realm role.
+func IsAdmin(claims *domain.JWTClaims) bool {
+	for _, role := range claims.RealmAccess.Roles {
+		if role == "admin" {
+			return true
+		}
+	}
+	return false
+}
+
 type httpError struct{ msg string }
 
 func (e *httpError) Error() string { return e.msg }

@@ -15,6 +15,10 @@ func NewAvailabilityService(ar ports.AvailabilityRepository) *AvailabilityServic
 	return &AvailabilityService{ar: ar}
 }
 
+func (s *AvailabilityService) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
+	return s.ar.GetByID(ctx, id)
+}
+
 func (s *AvailabilityService) GetByProfessionalID(ctx context.Context, professionalID string) ([]*domain.Availability, error) {
 	return s.ar.GetByProfessionalID(ctx, professionalID)
 }

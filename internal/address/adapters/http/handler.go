@@ -6,15 +6,17 @@ import (
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/address/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
 )
 
 type AddressHandler struct {
-	svc ports.AddressService
+	svc       ports.AddressService
+	validator *shared.Validator
 }
 
-func NewAddressHandler(svc ports.AddressService) *AddressHandler {
-	return &AddressHandler{svc: svc}
+func NewAddressHandler(svc ports.AddressService, validator *shared.Validator) *AddressHandler {
+	return &AddressHandler{svc: svc, validator: validator}
 }
 
 func NewRouter(handler *AddressHandler) http.Handler {
@@ -97,6 +99,25 @@ func (h *AddressHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *AddressHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) {
+		a, err := h.svc.GetByID(r.Context(), id)
+		if err != nil {
+			http.Error(w, "address not found", http.StatusNotFound)
+			return
+		}
+		if !h.validator.ValidateSameUserID(r.Context(), claims.Email, a.UserID) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	}
+
 	var body updateAddressRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -129,16 +150,16 @@ func (h *AddressHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isAdmin := false
-	for _, role := range claims.RealmAccess.Roles {
-		if role == "admin" {
-			isAdmin = true
-			break
+	if !authmiddleware.IsAdmin(claims) {
+		a, err := h.svc.GetByID(r.Context(), id)
+		if err != nil {
+			http.Error(w, "address not found", http.StatusNotFound)
+			return
 		}
-	}
-	if !isAdmin {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
+		if !h.validator.ValidateSameUserID(r.Context(), claims.Email, a.UserID) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 	}
 
 	if err := h.svc.Delete(r.Context(), id); err != nil {
