@@ -15,9 +15,11 @@ type Config struct {
 }
 
 func Load() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		panic("pqp")
+	if os.Getenv("ENVIRONMENT") == "DEV" {
+		err := godotenv.Load()
+		if err != nil {
+			panic("Was not possible to load .env")
+		}
 	}
 	return &Config{
 		AppPort:     getEnv("APP_PORT", "8080"),
