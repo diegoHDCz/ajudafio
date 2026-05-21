@@ -9,9 +9,6 @@ services:
       - "${APP_PORT:-8080}:8080"
     env_file:
       - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
@@ -21,9 +18,6 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HEALTH_ENABLED: "true"
-      KC_HEALTH_PROBE_INTERVAL: "10s"
-      KC_HEALTH_PROBE_TIMEOUT: "5s"
-      KC_HEALTH_PROBE_RETRIES: "15"
     volumes:
       - ./ajudafio-theme/theme/ajudafio:/opt/keycloak/themes/ajudafio
       - keycloak_data:/opt/keycloak/data
@@ -35,6 +29,7 @@ services:
       timeout: 5s
       retries: 15
       start_period: 60s
+
   migrate:
     image: migrate/migrate:v4.17.1
     container_name: ajudafio_migrate
@@ -44,12 +39,8 @@ services:
       - ./migrations:/migrations
     command: >
       -path=/migrations
-      -database=postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}?sslmode=disable
+      -database=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
       up
-    depends_on:
-      postgres:
-        condition: service_healthy
 
 volumes:
-  postgres_data:
   keycloak_data:
