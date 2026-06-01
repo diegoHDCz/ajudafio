@@ -10,26 +10,6 @@ services:
     env_file:
       - .env
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.0
-    container_name: ajudafio_keycloak
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_HEALTH_ENABLED: "true"
-    volumes:
-      - ./ajudafio-theme/theme/ajudafio:/opt/keycloak/themes/ajudafio
-      - keycloak_data:/opt/keycloak/data
-    ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 60s
-
   migrate:
     image: migrate/migrate:v4.17.1
     container_name: ajudafio_migrate
