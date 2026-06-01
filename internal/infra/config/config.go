@@ -9,8 +9,9 @@ import (
 )
 
 type Config struct {
-	AppPort     string
-	DatabaseURL string
+	AppPort      string
+	DatabaseURL  string
+	ClerkJWKSURL string
 	// MigrationsPath string
 }
 
@@ -22,8 +23,9 @@ func Load() *Config {
 		}
 	}
 	return &Config{
-		AppPort:     getEnv("APP_PORT", "8080"),
-		DatabaseURL: mustGetEnv("DATABASE_URL"),
+		AppPort:      getEnv("APP_PORT", "8080"),
+		DatabaseURL:  mustGetEnv("DATABASE_URL"),
+		ClerkJWKSURL: mustGetEnv("CLERK_JWKS_URL"),
 		// MigrationsPath: getEnv("MIGRATIONS_PATH", "./migrations"),
 	}
 }

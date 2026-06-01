@@ -30,6 +30,14 @@ func NewRouter(handler *AddressHandler) http.Handler {
 	return r
 }
 
+// @Summary      Buscar endereço por ID
+// @Tags         addresses
+// @Produce      json
+// @Param        id   path      string  true  "Address ID"
+// @Success      200  {object}  addressResponse
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /addresses/{id} [get]
 func (h *AddressHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	address, err := h.svc.GetByID(r.Context(), id)
@@ -40,6 +48,14 @@ func (h *AddressHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(address))
 }
 
+// @Summary      Buscar endereços por User ID
+// @Tags         addresses
+// @Produce      json
+// @Param        userID  path      string  true  "User ID"
+// @Success      200     {array}   addressResponse
+// @Failure      500     {string}  string
+// @Security     BearerAuth
+// @Router       /addresses/user/{userID} [get]
 func (h *AddressHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 	addresses, err := h.svc.GetByUserID(r.Context(), userID)
@@ -54,6 +70,14 @@ func (h *AddressHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Buscar endereços por Contract ID
+// @Tags         addresses
+// @Produce      json
+// @Param        contractID  path      string  true  "Contract ID"
+// @Success      200         {array}   addressResponse
+// @Failure      500         {string}  string
+// @Security     BearerAuth
+// @Router       /addresses/contract/{contractID} [get]
 func (h *AddressHandler) GetByContractID(w http.ResponseWriter, r *http.Request) {
 	contractID := chi.URLParam(r, "contractID")
 	addresses, err := h.svc.GetByContractID(r.Context(), contractID)
@@ -68,6 +92,16 @@ func (h *AddressHandler) GetByContractID(w http.ResponseWriter, r *http.Request)
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Criar endereço
+// @Tags         addresses
+// @Accept       json
+// @Produce      json
+// @Param        body  body      createAddressRequest  true  "Dados do endereço"
+// @Success      201   {object}  addressResponse
+// @Failure      400   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /addresses [post]
 func (h *AddressHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createAddressRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -97,6 +131,19 @@ func (h *AddressHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusCreated, toResponse(address))
 }
 
+// @Summary      Atualizar endereço
+// @Tags         addresses
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string                true  "Address ID"
+// @Param        body  body      updateAddressRequest  true  "Dados a atualizar"
+// @Success      200   {object}  addressResponse
+// @Failure      401   {string}  string
+// @Failure      403   {string}  string
+// @Failure      404   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /addresses/{id} [patch]
 func (h *AddressHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -141,6 +188,15 @@ func (h *AddressHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(address))
 }
 
+// @Summary      Remover endereço
+// @Tags         addresses
+// @Param        id  path  string  true  "Address ID"
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /addresses/{id} [delete]
 func (h *AddressHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

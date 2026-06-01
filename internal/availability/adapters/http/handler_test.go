@@ -107,9 +107,7 @@ func makeTestAvailability() *domain.Availability {
 }
 
 func adminClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{
-		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
-	}
+	return &authdomain.JWTClaims{Role: "admin"}
 }
 
 func newAvailRouter(repo *stubAvailRepo) http.Handler {

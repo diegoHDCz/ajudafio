@@ -30,7 +30,13 @@ func NewRouter(h *Handler) http.Handler {
 	return r
 }
 
-// GET /users/me
+// @Summary      Dados do usuário autenticado
+// @Tags         users
+// @Produce      json
+// @Success      200  {object}  meResponse
+// @Failure      401  {string}  string
+// @Security     BearerAuth
+// @Router       /users/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims := authmiddleware.GetClaims(r.Context())
 
@@ -44,7 +50,14 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GET /users/{id}
+// @Summary      Buscar usuário por ID
+// @Tags         users
+// @Produce      json
+// @Param        id   path      string  true  "User ID"
+// @Success      200  {object}  userResponse
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /users/{id} [get]
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
 
@@ -57,7 +70,16 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(user))
 }
 
-// POST /users
+// @Summary      Criar usuário
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        body  body      createUserRequest  true  "Dados do usuário"
+// @Success      201   {object}  userResponse
+// @Failure      400   {string}  string
+// @Failure      500   {string}  string
+// @Security     BearerAuth
+// @Router       /users [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -84,7 +106,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusCreated, toResponse(user))
 }
 
-// PATCH /users/{id}
+// @Summary      Atualizar usuário
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string             true  "User ID"
+// @Param        body  body      updateUserRequest  true  "Dados a atualizar"
+// @Success      200   {object}  userResponse
+// @Failure      400   {string}  string
+// @Failure      401   {string}  string
+// @Failure      403   {string}  string
+// @Failure      500   {string}  string
+// @Security     BearerAuth
+// @Router       /users/{id} [patch]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
 
@@ -120,7 +154,15 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(user))
 }
 
-// DELETE /users/{id}
+// @Summary      Remover usuário
+// @Tags         users
+// @Param        id  path  string  true  "User ID"
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /users/{id} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
 

@@ -97,10 +97,7 @@ func newAddrRouter(svc ports.AddressService) http.Handler {
 }
 
 func adminClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{
-		Sub:         "admin-user",
-		RealmAccess: authdomain.RealmAccess{Roles: []string{"admin"}},
-	}
+	return &authdomain.JWTClaims{Role: "admin"}
 }
 
 // --- GetByID ---

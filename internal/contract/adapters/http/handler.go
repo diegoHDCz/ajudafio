@@ -35,6 +35,13 @@ func NewRouter(h *ContractHandler) http.Handler {
 	return r
 }
 
+// @Summary      Listar todos os contratos
+// @Tags         contracts
+// @Produce      json
+// @Success      200  {array}   contractResponse
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /contracts [get]
 func (h *ContractHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	contracts, err := h.svc.GetAll(r.Context())
 	if err != nil {
@@ -48,6 +55,14 @@ func (h *ContractHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Buscar contrato por ID
+// @Tags         contracts
+// @Produce      json
+// @Param        id   path      string  true  "Contract ID"
+// @Success      200  {object}  contractResponse
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/{id} [get]
 func (h *ContractHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	c, err := h.svc.GetByID(r.Context(), id)
@@ -58,6 +73,15 @@ func (h *ContractHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(c))
 }
 
+// @Summary      Buscar contratos por User ID
+// @Tags         contracts
+// @Produce      json
+// @Param        userID  path      string  true   "User ID"
+// @Param        status  query     string  false  "Filtrar por status"
+// @Success      200     {array}   contractResponse
+// @Failure      500     {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/user/{userID} [get]
 func (h *ContractHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 	status := r.URL.Query().Get("status")
@@ -82,6 +106,15 @@ func (h *ContractHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Buscar contratos por Professional ID
+// @Tags         contracts
+// @Produce      json
+// @Param        professionalID  path      string  true   "Professional ID"
+// @Param        status          query     string  false  "Filtrar por status"
+// @Success      200             {array}   contractResponse
+// @Failure      500             {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/professional/{professionalID} [get]
 func (h *ContractHandler) GetByProfessionalID(w http.ResponseWriter, r *http.Request) {
 	professionalID := chi.URLParam(r, "professionalID")
 	status := r.URL.Query().Get("status")
@@ -106,6 +139,14 @@ func (h *ContractHandler) GetByProfessionalID(w http.ResponseWriter, r *http.Req
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Buscar contratos por status
+// @Tags         contracts
+// @Produce      json
+// @Param        status  path      string  true  "Status do contrato"
+// @Success      200     {array}   contractResponse
+// @Failure      500     {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/status/{status} [get]
 func (h *ContractHandler) GetByStatus(w http.ResponseWriter, r *http.Request) {
 	status := chi.URLParam(r, "status")
 	contracts, err := h.svc.GetByStatus(r.Context(), status)
@@ -120,6 +161,14 @@ func (h *ContractHandler) GetByStatus(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Buscar contratos por categoria do profissional
+// @Tags         contracts
+// @Produce      json
+// @Param        category  path      string  true  "Categoria do profissional"
+// @Success      200       {array}   contractResponse
+// @Failure      500       {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/category/{category} [get]
 func (h *ContractHandler) GetByProfessionalCategory(w http.ResponseWriter, r *http.Request) {
 	category := chi.URLParam(r, "category")
 	contracts, err := h.svc.GetByProfessionalCategory(r.Context(), category)
@@ -134,6 +183,16 @@ func (h *ContractHandler) GetByProfessionalCategory(w http.ResponseWriter, r *ht
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Criar contrato
+// @Tags         contracts
+// @Accept       json
+// @Produce      json
+// @Param        body  body      createContractRequest  true  "Dados do contrato"
+// @Success      201   {object}  contractResponse
+// @Failure      400   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /contracts [post]
 func (h *ContractHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createContractRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -172,6 +231,20 @@ func (h *ContractHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusCreated, toResponse(contract))
 }
 
+// @Summary      Atualizar contrato
+// @Tags         contracts
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string                 true  "Contract ID"
+// @Param        body  body      updateContractRequest  true  "Dados a atualizar"
+// @Success      200   {object}  contractResponse
+// @Failure      400   {string}  string
+// @Failure      401   {string}  string
+// @Failure      403   {string}  string
+// @Failure      404   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/{id} [patch]
 func (h *ContractHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -234,6 +307,15 @@ func (h *ContractHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(contract))
 }
 
+// @Summary      Remover contrato
+// @Tags         contracts
+// @Param        id  path  string  true  "Contract ID"
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /contracts/{id} [delete]
 func (h *ContractHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

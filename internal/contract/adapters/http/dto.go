@@ -12,7 +12,7 @@ type createContractRequest struct {
 	ProfessionalID string          `json:"professional_id"`
 	HourRate       int             `json:"hour_rate"`
 	TotalAmount    int             `json:"total_amount"`
-	Details        json.RawMessage `json:"details"`
+	Details        json.RawMessage `json:"details" swaggertype:"object"`
 	WeekDays       []string        `json:"week_days"`
 	Shift          string          `json:"shift"`
 	StartTime      string          `json:"start_time"` // "15:04"
@@ -24,7 +24,7 @@ type updateContractRequest struct {
 	Status      *string         `json:"status"`
 	HourRate    *int            `json:"hour_rate"`
 	TotalAmount *int            `json:"total_amount"`
-	Details     json.RawMessage `json:"details"`
+	Details     json.RawMessage `json:"details" swaggertype:"object"`
 	WeekDays    []string        `json:"week_days"`
 	Shift       *string         `json:"shift"`
 	StartTime   *string         `json:"start_time"` // "15:04"
@@ -39,7 +39,7 @@ type contractResponse struct {
 	Status         string          `json:"status"`
 	HourRate       int             `json:"hour_rate"`
 	TotalAmount    int             `json:"total_amount"`
-	Details        json.RawMessage `json:"details,omitempty"`
+	Details        json.RawMessage `json:"details,omitempty" swaggertype:"object"`
 	WeekDays       []string        `json:"week_days"`
 	Shift          string          `json:"shift"`
 	StartTime      string          `json:"start_time"`

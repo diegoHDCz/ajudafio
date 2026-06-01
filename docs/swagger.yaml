@@ -1,0 +1,1263 @@
+basePath: /
+definitions:
+  domain.Category:
+    enum:
+    - HOSPITAL_COMPANION
+    - ELDERLY_CAREGIVER
+    - NURSE
+    - PHYSIOTHERAPIST
+    type: string
+    x-enum-varnames:
+    - HospitalCompanion
+    - ElderlyCaregiver
+    - Nurse
+    - Physiotherapist
+  domain.Role:
+    enum:
+    - CLIENT
+    - PROFESSIONAL
+    - ADMIN
+    type: string
+    x-enum-varnames:
+    - RoleClient
+    - RoleProfessional
+    - RoleAdmin
+  http.addressResponse:
+    properties:
+      address_line:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      district:
+        type: string
+      id:
+        type: string
+      number:
+        type: string
+      reference:
+        type: string
+      state:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  http.availabilityResponse:
+    properties:
+      day_of_week:
+        items:
+          $ref: '#/definitions/shared.WeekDay'
+        type: array
+      end_hour:
+        type: string
+      id:
+        type: string
+      professional_id:
+        type: string
+      shift:
+        items:
+          $ref: '#/definitions/shared.Shift'
+        type: array
+      start_hour:
+        type: string
+    type: object
+  http.contractResponse:
+    properties:
+      client_id:
+        type: string
+      created_at:
+        type: string
+      details:
+        type: object
+      hour_rate:
+        type: integer
+      hours_per_day:
+        type: integer
+      id:
+        type: string
+      professional_id:
+        type: string
+      shift:
+        type: string
+      start_time:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: integer
+      total_hours:
+        type: integer
+      week_days:
+        items:
+          type: string
+        type: array
+    type: object
+  http.createAddressRequest:
+    properties:
+      address_line:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      contract_id:
+        type: string
+      district:
+        type: string
+      number:
+        type: string
+      reference:
+        type: string
+      state:
+        type: string
+      user_id:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  http.createAvailabilityRequest:
+    properties:
+      day_of_week:
+        items:
+          $ref: '#/definitions/shared.WeekDay'
+        type: array
+      end_hour:
+        type: string
+      professional_id:
+        type: string
+      shift:
+        items:
+          $ref: '#/definitions/shared.Shift'
+        type: array
+      start_hour:
+        type: string
+    type: object
+  http.createContractRequest:
+    properties:
+      client_id:
+        type: string
+      details:
+        type: object
+      hour_rate:
+        type: integer
+      hours_per_day:
+        type: integer
+      professional_id:
+        type: string
+      shift:
+        type: string
+      start_time:
+        description: '"15:04"'
+        type: string
+      total_amount:
+        type: integer
+      total_hours:
+        type: integer
+      week_days:
+        items:
+          type: string
+        type: array
+    type: object
+  http.createProfessionalRequest:
+    properties:
+      category:
+        $ref: '#/definitions/domain.Category'
+      license_number:
+        type: string
+      metadata:
+        type: object
+      resume:
+        type: string
+      user_id:
+        type: string
+      years_of_experience:
+        type: integer
+    type: object
+  http.createUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        $ref: '#/definitions/domain.Role'
+    type: object
+  http.meResponse:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+    type: object
+  http.professionalResponse:
+    properties:
+      category:
+        $ref: '#/definitions/domain.Category'
+      created_at:
+        type: string
+      id:
+        type: string
+      license_number:
+        type: string
+      metadata:
+        type: object
+      resume:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      verified:
+        type: boolean
+      years_of_experience:
+        type: integer
+    type: object
+  http.updateAddressRequest:
+    properties:
+      address_line:
+        type: string
+      city:
+        type: string
+      complement:
+        type: string
+      district:
+        type: string
+      number:
+        type: string
+      reference:
+        type: string
+      state:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  http.updateAvailabilityRequest:
+    properties:
+      day_of_week:
+        items:
+          $ref: '#/definitions/shared.WeekDay'
+        type: array
+      end_hour:
+        type: string
+      shift:
+        items:
+          $ref: '#/definitions/shared.Shift'
+        type: array
+      start_hour:
+        type: string
+    type: object
+  http.updateContractRequest:
+    properties:
+      details:
+        type: object
+      hour_rate:
+        type: integer
+      hours_per_day:
+        type: integer
+      shift:
+        type: string
+      start_time:
+        description: '"15:04"'
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: integer
+      total_hours:
+        type: integer
+      week_days:
+        items:
+          type: string
+        type: array
+    type: object
+  http.updateProfessionalRequest:
+    properties:
+      category:
+        $ref: '#/definitions/domain.Category'
+      license_number:
+        type: string
+      metadata:
+        type: object
+      resume:
+        type: string
+      verified:
+        type: boolean
+      years_of_experience:
+        type: integer
+    type: object
+  http.updateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        $ref: '#/definitions/domain.Role'
+    type: object
+  http.userResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      role:
+        $ref: '#/definitions/domain.Role'
+    type: object
+  shared.Shift:
+    enum:
+    - MORNING
+    - AFTERNOON
+    - NIGHT
+    - CUSTOM
+    type: string
+    x-enum-varnames:
+    - ShiftMorning
+    - ShiftAfternoon
+    - ShiftNight
+    - ShiftCustom
+  shared.WeekDay:
+    enum:
+    - MONDAY
+    - TUESDAY
+    - WEDNESDAY
+    - THURSDAY
+    - FRIDAY
+    - SATURDAY
+    - SUNDAY
+    type: string
+    x-enum-varnames:
+    - Monday
+    - Tuesday
+    - Wednesday
+    - Thursday
+    - Friday
+    - Saturday
+    - Sunday
+host: localhost:8080
+info:
+  contact: {}
+  description: API para gerenciamento de profissionais de cuidado domiciliar
+  title: Ajudafio API
+  version: "1.0"
+paths:
+  /addresses:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do endereço
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.addressResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar endereço
+      tags:
+      - addresses
+  /addresses/{id}:
+    delete:
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover endereço
+      tags:
+      - addresses
+    get:
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.addressResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar endereço por ID
+      tags:
+      - addresses
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.updateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.addressResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar endereço
+      tags:
+      - addresses
+  /addresses/contract/{contractID}:
+    get:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: contractID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.addressResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar endereços por Contract ID
+      tags:
+      - addresses
+  /addresses/user/{userID}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.addressResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar endereços por User ID
+      tags:
+      - addresses
+  /availabilities:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da disponibilidade
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.availabilityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar disponibilidade
+      tags:
+      - availabilities
+  /availabilities/{id}:
+    delete:
+      parameters:
+      - description: Availability ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover disponibilidade
+      tags:
+      - availabilities
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Availability ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.updateAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.availabilityResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar disponibilidade
+      tags:
+      - availabilities
+  /availabilities/professional/{professionalID}:
+    get:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: professionalID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.availabilityResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar disponibilidades por profissional
+      tags:
+      - availabilities
+  /contracts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.contractResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Listar todos os contratos
+      tags:
+      - contracts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do contrato
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createContractRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.contractResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar contrato
+      tags:
+      - contracts
+  /contracts/{id}:
+    delete:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover contrato
+      tags:
+      - contracts
+    get:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.contractResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar contrato por ID
+      tags:
+      - contracts
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Contract ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.updateContractRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.contractResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar contrato
+      tags:
+      - contracts
+  /contracts/category/{category}:
+    get:
+      parameters:
+      - description: Categoria do profissional
+        in: path
+        name: category
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.contractResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar contratos por categoria do profissional
+      tags:
+      - contracts
+  /contracts/professional/{professionalID}:
+    get:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: professionalID
+        required: true
+        type: string
+      - description: Filtrar por status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.contractResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar contratos por Professional ID
+      tags:
+      - contracts
+  /contracts/status/{status}:
+    get:
+      parameters:
+      - description: Status do contrato
+        in: path
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.contractResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar contratos por status
+      tags:
+      - contracts
+  /contracts/user/{userID}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: Filtrar por status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.contractResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar contratos por User ID
+      tags:
+      - contracts
+  /professionals:
+    get:
+      parameters:
+      - description: Cidade
+        in: query
+        name: city
+        type: string
+      - description: Estado (UF)
+        in: query
+        name: state
+        type: string
+      - collectionFormat: multi
+        description: Dias da semana
+        in: query
+        items:
+          type: string
+        name: day_of_week
+        type: array
+      - collectionFormat: multi
+        description: Turnos
+        in: query
+        items:
+          type: string
+        name: shift
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.professionalResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Listar profissionais com filtros
+      tags:
+      - professionals
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do profissional
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createProfessionalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.professionalResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar profissional
+      tags:
+      - professionals
+  /professionals/{id}:
+    delete:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover profissional
+      tags:
+      - professionals
+    get:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.professionalResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Buscar profissional por ID
+      tags:
+      - professionals
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Professional ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.updateProfessionalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.professionalResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar profissional
+      tags:
+      - professionals
+  /professionals/user/{userID}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.professionalResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar profissional por User ID
+      tags:
+      - professionals
+  /users:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar usuário
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover usuário
+      tags:
+      - users
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.userResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar usuário por ID
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados a atualizar
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.updateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar usuário
+      tags:
+      - users
+  /users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.meResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Dados do usuário autenticado
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT token no formato: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -13,19 +13,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	_ "github.com/diegoHDCz/ajudafio/docs"
 	"github.com/diegoHDCz/ajudafio/internal/infra/config"
 	"github.com/diegoHDCz/ajudafio/internal/infra/database"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
+	httpswagger "github.com/swaggo/http-swagger/v2"
 
 	address "github.com/diegoHDCz/ajudafio/internal/address"
 	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	addresspostgres "github.com/diegoHDCz/ajudafio/internal/address/adapters/postgres"
-	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	contract "github.com/diegoHDCz/ajudafio/internal/contract"
 	contracthttp "github.com/diegoHDCz/ajudafio/internal/contract/adapters/http"
 	contractpostgres "github.com/diegoHDCz/ajudafio/internal/contract/adapters/postgres"
-	keycloak "github.com/diegoHDCz/ajudafio/internal/auth/adapters/keycloak"
-	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
@@ -37,10 +37,21 @@ import (
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
 )
 
+//	@title			Ajudafio API
+//	@version		1.0
+//	@description	API para gerenciamento de profissionais de cuidado domiciliar
+//	@host			localhost:8080
+//	@BasePath		/
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				JWT token no formato: Bearer {token}
 func main() {
 
 	// ── Config ────────────────────────────────────────────────────────────────
 	fmt.Println("Loading configuration...")
+
 	cfg := config.Load()
 
 	// ── Database ──────────────────────────────────────────────────────────────
@@ -66,13 +77,8 @@ func main() {
 
 	userHandler := userhttp.NewHandler(userSvc, validator)
 
-	// ── Wire: auth slice ──────────────────────────────────────────────────────
-	authRepo := keycloak.NewKeycloakRepository("http://localhost:8080")
-	config, _ := authRepo.GetKeycloakConfig()
-	authSvc := authhttp.NewHandler(*authRepo, &config, userSvc)
-
 	// ── Wire: middleware request ──────────────────────────────────────────────────────
-	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), "http://localhost:8180/realms/ajudafio", "app-ajudafio")
+	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), cfg.ClerkJWKSURL)
 	if err != nil {
 		slog.Error("failed to initialize auth middleware", "error", err)
 		os.Exit(1)
@@ -111,7 +117,9 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r.Mount("/auth", authhttp.NewRouter(authSvc))
+	r.Get("/swagger/*", httpswagger.Handler(
+		httpswagger.URL("/swagger/doc.json"),
+	))
 
 	r.Route("/professionals", func(r chi.Router) {
 		r.Get("/", professionalHandler.FindWithFilters)

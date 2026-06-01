@@ -30,6 +30,13 @@ func NewRouter(handler *ProfessionalHandler) http.Handler {
 	return r
 }
 
+// @Summary      Buscar profissional por ID
+// @Tags         professionals
+// @Produce      json
+// @Param        id   path      string  true  "Professional ID"
+// @Success      200  {object}  professionalResponse
+// @Failure      404  {string}  string
+// @Router       /professionals/{id} [get]
 func (h *ProfessionalHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	p, err := h.svc.GetByID(r.Context(), id)
@@ -40,6 +47,14 @@ func (h *ProfessionalHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(p))
 }
 
+// @Summary      Buscar profissional por User ID
+// @Tags         professionals
+// @Produce      json
+// @Param        userID  path      string  true  "User ID"
+// @Success      200     {object}  professionalResponse
+// @Failure      404     {string}  string
+// @Security     BearerAuth
+// @Router       /professionals/user/{userID} [get]
 func (h *ProfessionalHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 	p, err := h.svc.GetByUserID(r.Context(), userID)
@@ -50,6 +65,16 @@ func (h *ProfessionalHandler) GetByUserID(w http.ResponseWriter, r *http.Request
 	respond(w, http.StatusOK, toResponse(p))
 }
 
+// @Summary      Criar profissional
+// @Tags         professionals
+// @Accept       json
+// @Produce      json
+// @Param        body  body      createProfessionalRequest  true  "Dados do profissional"
+// @Success      201   {object}  professionalResponse
+// @Failure      400   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /professionals [post]
 func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createProfessionalRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -75,6 +100,19 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusCreated, toResponse(p))
 }
 
+// @Summary      Atualizar profissional
+// @Tags         professionals
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string                     true  "Professional ID"
+// @Param        body  body      updateProfessionalRequest  true  "Dados a atualizar"
+// @Success      200   {object}  professionalResponse
+// @Failure      401   {string}  string
+// @Failure      403   {string}  string
+// @Failure      404   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /professionals/{id} [patch]
 func (h *ProfessionalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -117,6 +155,15 @@ func (h *ProfessionalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(p))
 }
 
+// @Summary      Remover profissional
+// @Tags         professionals
+// @Param        id  path  string  true  "Professional ID"
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /professionals/{id} [delete]
 func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -144,6 +191,16 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// @Summary      Listar profissionais com filtros
+// @Tags         professionals
+// @Produce      json
+// @Param        city         query     string    false  "Cidade"
+// @Param        state        query     string    false  "Estado (UF)"
+// @Param        day_of_week  query     []string  false  "Dias da semana"  collectionFormat(multi)
+// @Param        shift        query     []string  false  "Turnos"          collectionFormat(multi)
+// @Success      200  {array}   professionalResponse
+// @Failure      500  {string}  string
+// @Router       /professionals [get]
 func (h *ProfessionalHandler) FindWithFilters(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	filters := ports.ProfessionalFilters{}

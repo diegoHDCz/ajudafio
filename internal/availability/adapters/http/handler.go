@@ -31,6 +31,14 @@ func NewAvailabilityRouter(h *AvailabilityHandler) http.Handler {
 	return r
 }
 
+// @Summary      Buscar disponibilidades por profissional
+// @Tags         availabilities
+// @Produce      json
+// @Param        professionalID  path      string  true  "Professional ID"
+// @Success      200             {array}   availabilityResponse
+// @Failure      500             {string}  string
+// @Security     BearerAuth
+// @Router       /availabilities/professional/{professionalID} [get]
 func (h *AvailabilityHandler) GetByProfessionalID(w http.ResponseWriter, r *http.Request) {
 	professionalID := chi.URLParam(r, "professionalID")
 	list, err := h.s.GetByProfessionalID(r.Context(), professionalID)
@@ -45,6 +53,16 @@ func (h *AvailabilityHandler) GetByProfessionalID(w http.ResponseWriter, r *http
 	respond(w, http.StatusOK, resp)
 }
 
+// @Summary      Criar disponibilidade
+// @Tags         availabilities
+// @Accept       json
+// @Produce      json
+// @Param        body  body      createAvailabilityRequest  true  "Dados da disponibilidade"
+// @Success      201   {object}  availabilityResponse
+// @Failure      400   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /availabilities [post]
 func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body createAvailabilityRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -69,6 +87,19 @@ func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusCreated, toResponse(a))
 }
 
+// @Summary      Atualizar disponibilidade
+// @Tags         availabilities
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string                     true  "Availability ID"
+// @Param        body  body      updateAvailabilityRequest  true  "Dados a atualizar"
+// @Success      200   {object}  availabilityResponse
+// @Failure      401   {string}  string
+// @Failure      403   {string}  string
+// @Failure      404   {string}  string
+// @Failure      422   {string}  string
+// @Security     BearerAuth
+// @Router       /availabilities/{id} [patch]
 func (h *AvailabilityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -104,6 +135,15 @@ func (h *AvailabilityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, toResponse(a))
 }
 
+// @Summary      Remover disponibilidade
+// @Tags         availabilities
+// @Param        id  path  string  true  "Availability ID"
+// @Success      204
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      404  {string}  string
+// @Security     BearerAuth
+// @Router       /availabilities/{id} [delete]
 func (h *AvailabilityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

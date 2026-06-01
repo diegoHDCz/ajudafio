@@ -13,7 +13,7 @@ type createProfessionalRequest struct {
 	Category          domain.Category `json:"category"`
 	YearsOfExperience int             `json:"years_of_experience"`
 	Resume            *string         `json:"resume"`
-	Metadata          json.RawMessage `json:"metadata"`
+	Metadata          json.RawMessage `json:"metadata" swaggertype:"object"`
 }
 
 type updateProfessionalRequest struct {
@@ -22,7 +22,7 @@ type updateProfessionalRequest struct {
 	YearsOfExperience *int             `json:"years_of_experience"`
 	Verified          *bool            `json:"verified"`
 	Resume            *string          `json:"resume"`
-	Metadata          json.RawMessage  `json:"metadata"`
+	Metadata          json.RawMessage  `json:"metadata" swaggertype:"object"`
 }
 
 type professionalResponse struct {
@@ -33,7 +33,7 @@ type professionalResponse struct {
 	YearsOfExperience int             `json:"years_of_experience"`
 	Verified          bool            `json:"verified"`
 	Resume            string          `json:"resume"`
-	Metadata          json.RawMessage `json:"metadata,omitempty"`
+	Metadata          json.RawMessage `json:"metadata,omitempty" swaggertype:"object"`
 	CreatedAt         string          `json:"created_at"`
 	UpdatedAt         string          `json:"updated_at"`
 }
