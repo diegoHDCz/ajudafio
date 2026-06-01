@@ -21,6 +21,3 @@ services:
       -path=/migrations
       -database=${DATABASE_URL}
       up
-
-volumes:
-  keycloak_data:
