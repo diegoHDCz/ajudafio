@@ -20,12 +20,6 @@ func NewHandler(svc ports.UserService, validator *shared.Validator) *Handler {
 	return &Handler{svc: svc, validator: validator}
 }
 
-func NewPublicRouter(h *Handler) http.Handler {
-	r := chi.NewRouter()
-	r.Post("/", h.Create)
-	return r
-}
-
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/me", h.Me)

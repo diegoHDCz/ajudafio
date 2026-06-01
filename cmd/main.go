@@ -143,11 +143,19 @@ func main() {
 		})
 	})
 
-	r.Mount("/users", userhttp.NewPublicRouter(userHandler))
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/", userHandler.Create)
+		r.Group(func(r chi.Router) {
+			r.Use(authMW.RequestAuth)
+			r.Get("/me", userHandler.Me)
+			r.Get("/{id}", userHandler.GetByID)
+			r.Patch("/{id}", userHandler.Update)
+			r.Delete("/{id}", userHandler.Delete)
+		})
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(authMW.RequestAuth)
-		r.Mount("/users", userhttp.NewRouter(userHandler))
 		r.Mount("/availabilities", availabilityhttp.NewAvailabilityRouter(availabilityHandler))
 		r.Mount("/addresses", addresshttp.NewRouter(addressHandler))
 		r.Mount("/contracts", contracthttp.NewRouter(contractHandler))
