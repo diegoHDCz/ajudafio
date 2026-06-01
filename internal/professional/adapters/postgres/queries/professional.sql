@@ -62,6 +62,6 @@ LEFT JOIN availabilities av ON p.id = av.professional_id
 WHERE
     (sqlc.narg('city')::text IS NULL OR a.city = sqlc.narg('city')::text)
     AND (sqlc.narg('state')::text IS NULL OR a.state = sqlc.narg('state')::text)
-    AND (cardinality(sqlc.narg('day_of_week')::text[]) = 0 OR av.day_of_week = ANY(sqlc.narg('day_of_week')::text[]))
-    AND (cardinality(sqlc.narg('shift')::text[]) = 0 OR av.shift = ANY(sqlc.narg('shift')::text[]))
+    AND (sqlc.narg('day_of_week')::text[] IS NULL OR av.day_of_week && sqlc.narg('day_of_week')::text[])
+    AND (sqlc.narg('shift')::text[] IS NULL OR av.shift && sqlc.narg('shift')::text[])
 ORDER BY p.created_at DESC;

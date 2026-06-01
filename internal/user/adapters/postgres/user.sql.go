@@ -8,7 +8,7 @@ package userpostgres
 import (
 	"context"
 
-	"github.com/diegoHDCz/ajudafio/internal/user/domain"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -29,11 +29,11 @@ RETURNING id, name, email, phone, role, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	ID    domain.UserID `json:"id"`
-	Name  string        `json:"name"`
-	Email string        `json:"email"`
-	Phone *string       `json:"phone"`
-	Role  string        `json:"role"`
+	ID    pgtype.UUID `json:"id"`
+	Name  string      `json:"name"`
+	Email string      `json:"email"`
+	Phone *string     `json:"phone"`
+	Role  string      `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -62,7 +62,7 @@ DELETE FROM users
 WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id domain.UserID) error {
+func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
 }
@@ -96,7 +96,7 @@ WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id domain.UserID) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
@@ -123,11 +123,11 @@ RETURNING id, name, email, phone, role, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Name  string        `json:"name"`
-	Email string        `json:"email"`
-	Phone *string       `json:"phone"`
-	Role  string        `json:"role"`
-	ID    domain.UserID `json:"id"`
+	Name  string      `json:"name"`
+	Email string      `json:"email"`
+	Phone *string     `json:"phone"`
+	Role  string      `json:"role"`
+	ID    pgtype.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {

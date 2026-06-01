@@ -20,14 +20,14 @@ import (
 // --- Mock ---
 
 type mockUserSvc struct {
-	getByID    func(context.Context, domain.UserID) (*domain.User, error)
+	getByID    func(context.Context, string) (*domain.User, error)
 	getByEmail func(context.Context, string) (*domain.User, error)
 	create     func(context.Context, ports.CreateUserInput) (*domain.User, error)
 	update     func(context.Context, ports.UpdateUserInput) (*domain.User, error)
-	deleteFn   func(context.Context, domain.UserID) error
+	deleteFn   func(context.Context, string) error
 }
 
-func (m *mockUserSvc) GetByID(ctx context.Context, id domain.UserID) (*domain.User, error) {
+func (m *mockUserSvc) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	return m.getByID(ctx, id)
 }
 func (m *mockUserSvc) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -39,7 +39,7 @@ func (m *mockUserSvc) Create(ctx context.Context, input ports.CreateUserInput) (
 func (m *mockUserSvc) Update(ctx context.Context, input ports.UpdateUserInput) (*domain.User, error) {
 	return m.update(ctx, input)
 }
-func (m *mockUserSvc) Delete(ctx context.Context, id domain.UserID) error {
+func (m *mockUserSvc) Delete(ctx context.Context, id string) error {
 	return m.deleteFn(ctx, id)
 }
 
@@ -98,7 +98,7 @@ func TestUserMe_NoClaims(t *testing.T) {
 func TestUserGetByID_Success(t *testing.T) {
 	user := makeTestUser()
 	svc := &mockUserSvc{
-		getByID: func(_ context.Context, id domain.UserID) (*domain.User, error) {
+		getByID: func(_ context.Context, id string) (*domain.User, error) {
 			if id != user.ID {
 				t.Errorf("id: got %s, want %s", id, user.ID)
 			}
@@ -128,7 +128,7 @@ func TestUserGetByID_Success(t *testing.T) {
 
 func TestUserGetByID_NotFound(t *testing.T) {
 	svc := &mockUserSvc{
-		getByID: func(_ context.Context, _ domain.UserID) (*domain.User, error) {
+		getByID: func(_ context.Context, _ string) (*domain.User, error) {
 			return nil, errors.New("not found")
 		},
 	}
@@ -322,7 +322,7 @@ func TestUserDelete_NoClaims(t *testing.T) {
 
 func TestUserDelete_Success(t *testing.T) {
 	svc := &mockUserSvc{
-		deleteFn: func(_ context.Context, id domain.UserID) error {
+		deleteFn: func(_ context.Context, id string) error {
 			if id != "user-1" {
 				t.Errorf("id: got %s, want user-1", id)
 			}
@@ -344,7 +344,7 @@ func TestUserDelete_Success(t *testing.T) {
 
 func TestUserDelete_ServiceError(t *testing.T) {
 	svc := &mockUserSvc{
-		deleteFn: func(_ context.Context, _ domain.UserID) error {
+		deleteFn: func(_ context.Context, _ string) error {
 			return errors.New("delete failed")
 		},
 	}

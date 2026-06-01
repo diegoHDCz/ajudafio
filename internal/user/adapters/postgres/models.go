@@ -5,12 +5,11 @@
 package userpostgres
 
 import (
-	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Address struct {
-	ID          domain.UserID    `json:"id"`
+	ID          pgtype.UUID      `json:"id"`
 	UserID      pgtype.UUID      `json:"user_id"`
 	ContractID  pgtype.UUID      `json:"contract_id"`
 	ZipCode     string           `json:"zip_code"`
@@ -26,18 +25,18 @@ type Address struct {
 }
 
 type Availability struct {
-	ID             domain.UserID `json:"id"`
-	ProfessionalID domain.UserID `json:"professional_id"`
-	DayOfWeek      []string      `json:"day_of_week"`
-	Shift          []string      `json:"shift"`
-	StartHour      *string       `json:"start_hour"`
-	EndHour        *string       `json:"end_hour"`
+	ID             pgtype.UUID `json:"id"`
+	ProfessionalID pgtype.UUID `json:"professional_id"`
+	DayOfWeek      []string    `json:"day_of_week"`
+	Shift          []string    `json:"shift"`
+	StartHour      *string     `json:"start_hour"`
+	EndHour        *string     `json:"end_hour"`
 }
 
 type Contract struct {
-	ID             domain.UserID    `json:"id"`
-	ClientID       domain.UserID    `json:"client_id"`
-	ProfessionalID domain.UserID    `json:"professional_id"`
+	ID             pgtype.UUID      `json:"id"`
+	ClientID       pgtype.UUID      `json:"client_id"`
+	ProfessionalID pgtype.UUID      `json:"professional_id"`
 	Status         string           `json:"status"`
 	HourRate       int32            `json:"hour_rate"`
 	TotalAmount    int32            `json:"total_amount"`
@@ -51,8 +50,8 @@ type Contract struct {
 }
 
 type Professional struct {
-	ID                domain.UserID    `json:"id"`
-	UserID            domain.UserID    `json:"user_id"`
+	ID                pgtype.UUID      `json:"id"`
+	UserID            pgtype.UUID      `json:"user_id"`
 	LicenseNumber     *string          `json:"license_number"`
 	Category          string           `json:"category"`
 	YearsOfExperience *int32           `json:"years_of_experience"`
@@ -64,9 +63,9 @@ type Professional struct {
 }
 
 type Review struct {
-	ID             domain.UserID    `json:"id"`
-	ClientID       domain.UserID    `json:"client_id"`
-	ProfessionalID domain.UserID    `json:"professional_id"`
+	ID             pgtype.UUID      `json:"id"`
+	ClientID       pgtype.UUID      `json:"client_id"`
+	ProfessionalID pgtype.UUID      `json:"professional_id"`
 	ContractID     pgtype.UUID      `json:"contract_id"`
 	Rating         int32            `json:"rating"`
 	Comment        *string          `json:"comment"`
@@ -75,7 +74,7 @@ type Review struct {
 }
 
 type User struct {
-	ID        domain.UserID    `json:"id"`
+	ID        pgtype.UUID      `json:"id"`
 	Name      string           `json:"name"`
 	Email     string           `json:"email"`
 	Phone     *string          `json:"phone"`

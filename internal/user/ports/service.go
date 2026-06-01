@@ -7,11 +7,11 @@ import (
 )
 
 type UserService interface {
-	GetByID(ctx context.Context, id domain.UserID) (*domain.User, error)
+	GetByID(ctx context.Context, id string) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 	Create(ctx context.Context, input CreateUserInput) (*domain.User, error)
 	Update(ctx context.Context, input UpdateUserInput) (*domain.User, error)
-	Delete(ctx context.Context, id domain.UserID) error
+	Delete(ctx context.Context, id string) error
 }
 
 type CreateUserInput struct {
@@ -23,7 +23,7 @@ type CreateUserInput struct {
 }
 
 type UpdateUserInput struct {
-	ID    domain.UserID
+	ID    string
 	Email *string
 	Name  *string
 	Phone *string

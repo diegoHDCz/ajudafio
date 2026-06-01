@@ -2,9 +2,6 @@ package domain
 
 import "time"
 
-// UserID definido como string para representar o UUID vindo do banco.
-type UserID string
-
 type Role string
 
 const (
@@ -14,7 +11,7 @@ const (
 )
 
 type User struct {
-	ID        UserID
+	ID        string
 	Name      string  // Alterado para string (NOT NULL no banco)
 	Email     string  // NOT NULL UNIQUE no banco
 	Phone     *string // Ponteiro pois na tabela não tem NOT NULL

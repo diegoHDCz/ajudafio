@@ -6,6 +6,7 @@ import (
 
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
+	"github.com/google/uuid"
 )
 
 type service struct {
@@ -16,7 +17,7 @@ func NewService(repo ports.UserRepository) ports.UserService {
 	return &service{repo: repo}
 }
 
-func (s *service) GetByID(ctx context.Context, id domain.UserID) (*domain.User, error) {
+func (s *service) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("user.GetByID: %w", err)
@@ -34,6 +35,7 @@ func (s *service) GetByEmail(ctx context.Context, email string) (*domain.User, e
 
 func (s *service) Create(ctx context.Context, input ports.CreateUserInput) (*domain.User, error) {
 	user := &domain.User{
+		ID:    uuid.New().String(),
 		Email: input.Email,
 		Name:  input.Name,  // Agora é string direta
 		Phone: input.Phone, // Mapeado para o novo nome
@@ -74,7 +76,7 @@ func (s *service) Update(ctx context.Context, input ports.UpdateUserInput) (*dom
 	return updated, nil
 }
 
-func (s *service) Delete(ctx context.Context, id domain.UserID) error {
+func (s *service) Delete(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("user.Delete: %w", err)
 	}

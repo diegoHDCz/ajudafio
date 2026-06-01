@@ -70,7 +70,7 @@ func (s *stubUserSvcProf) GetByEmail(ctx context.Context, email string) (*userdo
 	}
 	return nil, errors.New("user not found")
 }
-func (s *stubUserSvcProf) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+func (s *stubUserSvcProf) GetByID(_ context.Context, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
 func (s *stubUserSvcProf) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
@@ -79,7 +79,7 @@ func (s *stubUserSvcProf) Create(_ context.Context, _ userports.CreateUserInput)
 func (s *stubUserSvcProf) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
-func (s *stubUserSvcProf) Delete(_ context.Context, _ userdomain.UserID) error {
+func (s *stubUserSvcProf) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
 
@@ -498,7 +498,7 @@ func TestProfDelete_OwnerCanDelete(t *testing.T) {
 	}
 	userSvc := &stubUserSvcProf{
 		getByEmail: func(_ context.Context, _ string) (*userdomain.User, error) {
-			return &userdomain.User{ID: userdomain.UserID(p.UserID)}, nil
+			return &userdomain.User{ID: string(p.UserID)}, nil
 		},
 	}
 	router := newProfRouterWithValidator(svc, userSvc)

@@ -10,6 +10,7 @@ import (
 	professionalports "github.com/diegoHDCz/ajudafio/internal/professional/ports"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type AvailabilityHandler struct {
@@ -74,6 +75,7 @@ func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, err := h.s.Create(r.Context(), &domain.Availability{
+		ID:             uuid.New().String(),
 		ProfessionalID: body.ProfessionalID,
 		DayOfWeek:      body.DayOfWeek,
 		Shift:          body.Shift,

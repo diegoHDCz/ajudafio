@@ -5,6 +5,7 @@ import (
 
 	"github.com/diegoHDCz/ajudafio/internal/contract/domain"
 	"github.com/diegoHDCz/ajudafio/internal/contract/ports"
+	"github.com/google/uuid"
 )
 
 var _ ports.ContractService = (*ContractService)(nil)
@@ -19,6 +20,7 @@ func NewContractService(repo ports.ContractRepository) *ContractService {
 
 func (s *ContractService) Create(ctx context.Context, input ports.CreateContractInput) (*domain.Contract, error) {
 	contract := &domain.Contract{
+		ID:             uuid.New().String(),
 		ClientID:       input.ClientID,
 		ProfessionalID: input.ProfessionalID,
 		HourRate:       input.HourRate,

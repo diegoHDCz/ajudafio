@@ -78,7 +78,7 @@ func (s *stubUserSvcAddr) GetByEmail(ctx context.Context, email string) (*userdo
 	}
 	return nil, errors.New("user not found")
 }
-func (s *stubUserSvcAddr) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+func (s *stubUserSvcAddr) GetByID(_ context.Context, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
 func (s *stubUserSvcAddr) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
@@ -87,7 +87,7 @@ func (s *stubUserSvcAddr) Create(_ context.Context, _ userports.CreateUserInput)
 func (s *stubUserSvcAddr) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
-func (s *stubUserSvcAddr) Delete(_ context.Context, _ userdomain.UserID) error {
+func (s *stubUserSvcAddr) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
 

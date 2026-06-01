@@ -11,14 +11,14 @@ import (
 
 // mockUserRepo implements ports.UserRepository for testing.
 type mockUserRepo struct {
-	getByID    func(context.Context, domain.UserID) (*domain.User, error)
+	getByID    func(context.Context, string) (*domain.User, error)
 	getByEmail func(context.Context, string) (*domain.User, error)
 	create     func(context.Context, *domain.User) (*domain.User, error)
 	update     func(context.Context, *domain.User) (*domain.User, error)
-	delete     func(context.Context, domain.UserID) error
+	delete     func(context.Context, string) error
 }
 
-func (m *mockUserRepo) GetByID(ctx context.Context, id domain.UserID) (*domain.User, error) {
+func (m *mockUserRepo) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	return m.getByID(ctx, id)
 }
 func (m *mockUserRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -30,7 +30,7 @@ func (m *mockUserRepo) Create(ctx context.Context, u *domain.User) (*domain.User
 func (m *mockUserRepo) Update(ctx context.Context, u *domain.User) (*domain.User, error) {
 	return m.update(ctx, u)
 }
-func (m *mockUserRepo) Delete(ctx context.Context, id domain.UserID) error {
+func (m *mockUserRepo) Delete(ctx context.Context, id string) error {
 	return m.delete(ctx, id)
 }
 
@@ -51,7 +51,7 @@ func makeUser() *domain.User {
 func TestGetByID_Success(t *testing.T) {
 	want := makeUser()
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, id domain.UserID) (*domain.User, error) {
+		getByID: func(_ context.Context, id string) (*domain.User, error) {
 			if id != "user-1" {
 				t.Fatalf("unexpected id: %s", id)
 			}
@@ -71,7 +71,7 @@ func TestGetByID_Success(t *testing.T) {
 func TestGetByID_RepoError(t *testing.T) {
 	repoErr := errors.New("db error")
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, _ domain.UserID) (*domain.User, error) {
+		getByID: func(_ context.Context, _ string) (*domain.User, error) {
 			return nil, repoErr
 		},
 	})
@@ -181,7 +181,7 @@ func TestUpdate_AllFields(t *testing.T) {
 	}
 
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, id domain.UserID) (*domain.User, error) {
+		getByID: func(_ context.Context, id string) (*domain.User, error) {
 			if id != existing.ID {
 				t.Fatalf("unexpected id: %s", id)
 			}
@@ -220,7 +220,7 @@ func TestUpdate_PartialFields(t *testing.T) {
 	input := ports.UpdateUserInput{ID: existing.ID, Name: ptrString(newName)}
 
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, _ domain.UserID) (*domain.User, error) { return existing, nil },
+		getByID: func(_ context.Context, _ string) (*domain.User, error) { return existing, nil },
 		update:  func(_ context.Context, u *domain.User) (*domain.User, error) { return u, nil },
 	})
 
@@ -239,7 +239,7 @@ func TestUpdate_PartialFields(t *testing.T) {
 func TestUpdate_NotFound(t *testing.T) {
 	repoErr := errors.New("not found")
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, _ domain.UserID) (*domain.User, error) { return nil, repoErr },
+		getByID: func(_ context.Context, _ string) (*domain.User, error) { return nil, repoErr },
 	})
 
 	_, err := svc.Update(context.Background(), ports.UpdateUserInput{ID: "missing"})
@@ -253,7 +253,7 @@ func TestUpdate_RepoUpdateError(t *testing.T) {
 	repoErr := errors.New("update failed")
 
 	svc := NewService(&mockUserRepo{
-		getByID: func(_ context.Context, _ domain.UserID) (*domain.User, error) { return existing, nil },
+		getByID: func(_ context.Context, _ string) (*domain.User, error) { return existing, nil },
 		update:  func(_ context.Context, _ *domain.User) (*domain.User, error) { return nil, repoErr },
 	})
 
@@ -267,7 +267,7 @@ func TestUpdate_RepoUpdateError(t *testing.T) {
 
 func TestDelete_Success(t *testing.T) {
 	svc := NewService(&mockUserRepo{
-		delete: func(_ context.Context, id domain.UserID) error {
+		delete: func(_ context.Context, id string) error {
 			if id != "user-1" {
 				t.Fatalf("unexpected id: %s", id)
 			}
@@ -283,7 +283,7 @@ func TestDelete_Success(t *testing.T) {
 func TestDelete_RepoError(t *testing.T) {
 	repoErr := errors.New("delete failed")
 	svc := NewService(&mockUserRepo{
-		delete: func(_ context.Context, _ domain.UserID) error { return repoErr },
+		delete: func(_ context.Context, _ string) error { return repoErr },
 	})
 
 	err := svc.Delete(context.Background(), "user-1")

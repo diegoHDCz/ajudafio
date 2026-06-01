@@ -9,6 +9,7 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -58,7 +59,7 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/{id} [get]
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id := domain.UserID(chi.URLParam(r, "id"))
+	id := chi.URLParam(r, "id")
 
 	user, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
@@ -92,6 +93,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.svc.Create(r.Context(), ports.CreateUserInput{
+		ID:    uuid.New().String(),
 		Email: body.Email,
 		Name:  body.Name,
 		Phone: body.Phone,
@@ -119,7 +121,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/{id} [patch]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	id := domain.UserID(chi.URLParam(r, "id"))
+	id := chi.URLParam(r, "id")
 
 	claims := authmiddleware.GetClaims(r.Context())
 	if claims == nil {
@@ -127,7 +129,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, string(id)) {
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -163,7 +165,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/{id} [delete]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	id := domain.UserID(chi.URLParam(r, "id"))
+	id := chi.URLParam(r, "id")
 
 	claims := authmiddleware.GetClaims(r.Context())
 	if claims == nil {
@@ -171,7 +173,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, string(id)) {
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}

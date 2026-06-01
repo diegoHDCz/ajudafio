@@ -7,7 +7,9 @@ import (
 
 	"github.com/diegoHDCz/ajudafio/internal/user/domain"
 	"github.com/diegoHDCz/ajudafio/internal/user/ports"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,8 +25,12 @@ func NewRepository(db *pgxpool.Pool) ports.UserRepository {
 	}
 }
 
-func (r *repository) GetByID(ctx context.Context, id domain.UserID) (*domain.User, error) {
-	row, err := r.queries.GetUserByID(ctx, id)
+func (r *repository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+	uid, err := parseUUID(id)
+	if err != nil {
+		return nil, fmt.Errorf("userpostgres.GetByID: invalid id: %w", err)
+	}
+	row, err := r.queries.GetUserByID(ctx, uid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found: %w", err)
@@ -46,10 +52,15 @@ func (r *repository) GetByEmail(ctx context.Context, email string) (*domain.User
 }
 
 func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
+	uid, err := parseUUID(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("userpostgres.Create: invalid id: %w", err)
+	}
 	row, err := r.queries.CreateUser(ctx, CreateUserParams{
+		ID:    uid,
 		Name:  user.Name,
 		Email: user.Email,
-		Phone: user.Phone, // sqlc gerou como *string, certifique-se que o domínio também seja ou converta aqui
+		Phone: user.Phone,
 		Role:  string(user.Role),
 	})
 	if err != nil {
@@ -59,8 +70,12 @@ func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.Use
 }
 
 func (r *repository) Update(ctx context.Context, user *domain.User) (*domain.User, error) {
+	uid, err := parseUUID(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("userpostgres.Update: invalid id: %w", err)
+	}
 	row, err := r.queries.UpdateUser(ctx, UpdateUserParams{
-		ID:    user.ID,
+		ID:    uid,
 		Name:  user.Name,
 		Email: user.Email,
 		Phone: user.Phone,
@@ -72,22 +87,33 @@ func (r *repository) Update(ctx context.Context, user *domain.User) (*domain.Use
 	return toDomain(row), nil
 }
 
-func (r *repository) Delete(ctx context.Context, id domain.UserID) error {
-	if err := r.queries.DeleteUser(ctx, id); err != nil {
+func (r *repository) Delete(ctx context.Context, id string) error {
+	uid, err := parseUUID(id)
+	if err != nil {
+		return fmt.Errorf("userpostgres.Delete: invalid id: %w", err)
+	}
+	if err := r.queries.DeleteUser(ctx, uid); err != nil {
 		return fmt.Errorf("userpostgres.Delete: %w", err)
 	}
 	return nil
 }
 
-// toDomain mapeia a struct local "User" (gerada pelo sqlc) para a entidade de domínio.
 func toDomain(row User) *domain.User {
 	return &domain.User{
-		ID:        row.ID, // Já mapeado via sqlc override para domain.UserID
+		ID:        uuid.UUID(row.ID.Bytes).String(),
 		Name:      row.Name,
 		Email:     row.Email,
-		Phone:     row.Phone, // *string
+		Phone:     row.Phone,
 		Role:      domain.Role(row.Role),
 		CreatedAt: row.CreatedAt.Time,
 		UpdatedAt: row.UpdatedAt.Time,
 	}
+}
+
+func parseUUID(s string) (pgtype.UUID, error) {
+	uid, err := uuid.Parse(s)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	return pgtype.UUID{Bytes: uid, Valid: true}, nil
 }

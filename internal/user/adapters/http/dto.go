@@ -32,7 +32,7 @@ type userResponse struct {
 
 func toResponse(u *domain.User) userResponse {
 	return userResponse{
-		ID:        string(u.ID),
+		ID:        u.ID,
 		Email:     u.Email,
 		Name:      u.Name,
 		Phone:     u.Phone,

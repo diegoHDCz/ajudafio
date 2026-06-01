@@ -83,7 +83,7 @@ type stubUserSvcAvail struct{}
 func (s *stubUserSvcAvail) GetByEmail(_ context.Context, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not found")
 }
-func (s *stubUserSvcAvail) GetByID(_ context.Context, _ userdomain.UserID) (*userdomain.User, error) {
+func (s *stubUserSvcAvail) GetByID(_ context.Context, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
 func (s *stubUserSvcAvail) Create(_ context.Context, _ userports.CreateUserInput) (*userdomain.User, error) {
@@ -92,7 +92,7 @@ func (s *stubUserSvcAvail) Create(_ context.Context, _ userports.CreateUserInput
 func (s *stubUserSvcAvail) Update(_ context.Context, _ userports.UpdateUserInput) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
-func (s *stubUserSvcAvail) Delete(_ context.Context, _ userdomain.UserID) error {
+func (s *stubUserSvcAvail) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
 
