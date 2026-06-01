@@ -29,6 +29,10 @@ func (c Category) IsValid() bool {
 	return false
 }
 
+func (c Category) RequiresLicenseNumber() bool {
+	return c == Nurse || c == Physiotherapist
+}
+
 type Professional struct {
 	ID                string
 	UserID            string
@@ -46,11 +50,11 @@ func NewProfessional(id, userID, licenseNumber string, category Category, yearsO
 	if userID == "" {
 		return nil, ErrEmptyUserID
 	}
-	if licenseNumber == "" {
-		return nil, ErrEmptyLicenseNumber
-	}
 	if !category.IsValid() {
 		return nil, ErrInvalidCategory
+	}
+	if licenseNumber == "" && category.RequiresLicenseNumber() {
+		return nil, ErrEmptyLicenseNumber
 	}
 	if yearsOfExperience < 0 {
 		return nil, ErrNegativeYearsOfExp
@@ -67,18 +71,20 @@ func NewProfessional(id, userID, licenseNumber string, category Category, yearsO
 }
 
 func (p *Professional) ApplyUpdate(licenseNumber *string, category *Category, yearsOfExperience *int, verified *bool, resume *string, metadata []byte) error {
-	if licenseNumber != nil {
-		if *licenseNumber == "" {
-			return ErrEmptyLicenseNumber
-		}
-		p.LicenseNumber = *licenseNumber
-	}
+	effectiveCategory := p.Category
 	if category != nil {
 		if !category.IsValid() {
 			return ErrInvalidCategory
 		}
-		p.Category = *category
+		effectiveCategory = *category
 	}
+	if licenseNumber != nil {
+		if *licenseNumber == "" && effectiveCategory.RequiresLicenseNumber() {
+			return ErrEmptyLicenseNumber
+		}
+		p.LicenseNumber = *licenseNumber
+	}
+	p.Category = effectiveCategory
 	if yearsOfExperience != nil {
 		if *yearsOfExperience < 0 {
 			return ErrNegativeYearsOfExp

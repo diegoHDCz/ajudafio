@@ -38,7 +38,7 @@ func (r *repository) CreateContract(ctx context.Context, contract *domain.Contra
 		return fmt.Errorf("contractpostgres.CreateContract: %w", err)
 	}
 	shift := string(contract.Shift)
-	_, err = r.queries.CreateContract(ctx, CreateContractParams{
+	row, err := r.queries.CreateContract(ctx, CreateContractParams{
 		ClientID:       client,
 		ProfessionalID: professional,
 		HourRate:       int32(contract.HourRate),
@@ -53,6 +53,8 @@ func (r *repository) CreateContract(ctx context.Context, contract *domain.Contra
 	if err != nil {
 		return fmt.Errorf("contractpostgres.CreateContract: %w", err)
 	}
+	contract.ID = uuid.UUID(row.ID.Bytes).String()
+	contract.CreatedAt = row.CreatedAt.Time
 	return nil
 }
 
