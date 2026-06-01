@@ -143,6 +143,8 @@ func main() {
 		})
 	})
 
+	r.Mount("/users", userhttp.NewPublicRouter(userHandler))
+
 	r.Group(func(r chi.Router) {
 		r.Use(authMW.RequestAuth)
 		r.Mount("/users", userhttp.NewRouter(userHandler))

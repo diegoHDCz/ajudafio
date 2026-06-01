@@ -81,10 +81,6 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if body.UserID == "" || body.LicenseNumber == "" {
-		http.Error(w, "user_id and license_number are required", http.StatusBadRequest)
-		return
-	}
 	p, err := h.svc.Create(r.Context(), ports.CreateProfessionalInput{
 		UserID:            body.UserID,
 		LicenseNumber:     body.LicenseNumber,
