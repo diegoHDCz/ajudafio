@@ -12,6 +12,7 @@ type UserService interface {
 	Create(ctx context.Context, input CreateUserInput) (*domain.User, error)
 	Update(ctx context.Context, input UpdateUserInput) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
+	UpdateUserRole(ctx context.Context, id string, role domain.Role) error
 }
 
 type CreateUserInput struct {

@@ -82,15 +82,19 @@ func (s *stubUserSvcProf) Update(_ context.Context, _ userports.UpdateUserInput)
 func (s *stubUserSvcProf) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
+func (s *stubUserSvcProf) UpdateUserRole(_ context.Context, _ string, _ userdomain.Role) error {
+	return errors.New("not implemented")
+}
 
 func newProfRouter(svc ports.ProfessionalService) http.Handler {
-	validator := shared.NewValidator(&stubUserSvcProf{})
-	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, validator))
+	userSvc := &stubUserSvcProf{}
+	validator := shared.NewValidator(userSvc)
+	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, userSvc, validator))
 }
 
 func newProfRouterWithValidator(svc ports.ProfessionalService, userSvc userports.UserService) http.Handler {
 	validator := shared.NewValidator(userSvc)
-	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, validator))
+	return profhttp.NewRouter(profhttp.NewProfessionalHandler(svc, userSvc, validator))
 }
 
 // --- FindWithFilters ---

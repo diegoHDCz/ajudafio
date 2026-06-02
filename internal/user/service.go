@@ -37,8 +37,8 @@ func (s *service) Create(ctx context.Context, input ports.CreateUserInput) (*dom
 	user := &domain.User{
 		ID:    uuid.New().String(),
 		Email: input.Email,
-		Name:  input.Name,  // Agora é string direta
-		Phone: input.Phone, // Mapeado para o novo nome
+		Name:  input.Name,
+		Phone: input.Phone,
 		Role:  input.Role,
 	}
 
@@ -79,6 +79,13 @@ func (s *service) Update(ctx context.Context, input ports.UpdateUserInput) (*dom
 func (s *service) Delete(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("user.Delete: %w", err)
+	}
+	return nil
+}
+
+func (s *service) UpdateUserRole(ctx context.Context, id string, role domain.Role) error {
+	if err := s.repo.UpdateUserRole(ctx, id, role); err != nil {
+		return fmt.Errorf("user.UpdateUserRole: %w", err)
 	}
 	return nil
 }

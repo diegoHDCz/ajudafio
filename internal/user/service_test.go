@@ -11,11 +11,12 @@ import (
 
 // mockUserRepo implements ports.UserRepository for testing.
 type mockUserRepo struct {
-	getByID    func(context.Context, string) (*domain.User, error)
-	getByEmail func(context.Context, string) (*domain.User, error)
-	create     func(context.Context, *domain.User) (*domain.User, error)
-	update     func(context.Context, *domain.User) (*domain.User, error)
-	delete     func(context.Context, string) error
+	getByID        func(context.Context, string) (*domain.User, error)
+	getByEmail     func(context.Context, string) (*domain.User, error)
+	create         func(context.Context, *domain.User) (*domain.User, error)
+	update         func(context.Context, *domain.User) (*domain.User, error)
+	delete         func(context.Context, string) error
+	updateRoleFn   func(context.Context, string, domain.Role) error
 }
 
 func (m *mockUserRepo) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -32,6 +33,12 @@ func (m *mockUserRepo) Update(ctx context.Context, u *domain.User) (*domain.User
 }
 func (m *mockUserRepo) Delete(ctx context.Context, id string) error {
 	return m.delete(ctx, id)
+}
+func (m *mockUserRepo) UpdateUserRole(ctx context.Context, id string, role domain.Role) error {
+	if m.updateRoleFn != nil {
+		return m.updateRoleFn(ctx, id, role)
+	}
+	return nil
 }
 
 func ptrString(s string) *string { return &s }

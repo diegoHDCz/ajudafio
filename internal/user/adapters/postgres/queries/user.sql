@@ -39,3 +39,9 @@ RETURNING id, name, email, phone, role, created_at, updated_at;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = @id;
+
+-- name: UpdateUserRole :exec
+UPDATE users SET
+  role       = @role,
+  updated_at = NOW()
+WHERE id = @id;

@@ -23,6 +23,7 @@ func NewHandler(svc ports.UserService, validator *shared.Validator) *Handler {
 
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
+	r.Post("/", h.Create)
 	r.Get("/me", h.Me)
 	r.Get("/{id}", h.GetByID)
 	r.Patch("/{id}", h.Update)

@@ -20,11 +20,12 @@ import (
 // --- Mock ---
 
 type mockUserSvc struct {
-	getByID    func(context.Context, string) (*domain.User, error)
-	getByEmail func(context.Context, string) (*domain.User, error)
-	create     func(context.Context, ports.CreateUserInput) (*domain.User, error)
-	update     func(context.Context, ports.UpdateUserInput) (*domain.User, error)
-	deleteFn   func(context.Context, string) error
+	getByID        func(context.Context, string) (*domain.User, error)
+	getByEmail     func(context.Context, string) (*domain.User, error)
+	create         func(context.Context, ports.CreateUserInput) (*domain.User, error)
+	update         func(context.Context, ports.UpdateUserInput) (*domain.User, error)
+	deleteFn       func(context.Context, string) error
+	updateRoleFn   func(context.Context, string, domain.Role) error
 }
 
 func (m *mockUserSvc) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -41,6 +42,12 @@ func (m *mockUserSvc) Update(ctx context.Context, input ports.UpdateUserInput) (
 }
 func (m *mockUserSvc) Delete(ctx context.Context, id string) error {
 	return m.deleteFn(ctx, id)
+}
+func (m *mockUserSvc) UpdateUserRole(ctx context.Context, id string, role domain.Role) error {
+	if m.updateRoleFn != nil {
+		return m.updateRoleFn(ctx, id, role)
+	}
+	return nil
 }
 
 func makeTestUser() *domain.User {

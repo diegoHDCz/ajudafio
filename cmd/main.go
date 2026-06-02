@@ -24,12 +24,12 @@ import (
 	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	addresspostgres "github.com/diegoHDCz/ajudafio/internal/address/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
-	contract "github.com/diegoHDCz/ajudafio/internal/contract"
-	contracthttp "github.com/diegoHDCz/ajudafio/internal/contract/adapters/http"
-	contractpostgres "github.com/diegoHDCz/ajudafio/internal/contract/adapters/postgres"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
+	contract "github.com/diegoHDCz/ajudafio/internal/contract"
+	contracthttp "github.com/diegoHDCz/ajudafio/internal/contract/adapters/http"
+	contractpostgres "github.com/diegoHDCz/ajudafio/internal/contract/adapters/postgres"
 	professional "github.com/diegoHDCz/ajudafio/internal/professional"
 	professionalhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
 	professionalpostgres "github.com/diegoHDCz/ajudafio/internal/professional/adapters/postgres"
@@ -38,16 +38,16 @@ import (
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
 )
 
-//	@title			Ajudafio API
-//	@version		1.0
-//	@description	API para gerenciamento de profissionais de cuidado domiciliar
-//	@host			localhost:8080
-//	@BasePath		/
+// @title			Ajudafio API
+// @version		1.0
+// @description	API para gerenciamento de profissionais de cuidado domiciliar
+// @host			localhost:8080
+// @BasePath		/
 //
-//	@securityDefinitions.apikey	BearerAuth
-//	@in							header
-//	@name						Authorization
-//	@description				JWT token no formato: Bearer {token}
+// @securityDefinitions.apikey	BearerAuth
+// @in							header
+// @name						Authorization
+// @description				JWT token no formato: Bearer {token}
 func main() {
 
 	// ── Config ────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ func main() {
 	// ── Wire: professional slice ────────────────────────────────────────────────────────────────
 	professionalRepo := professionalpostgres.NewRepository(db)
 	professionalSvc := professional.NewProfessionalService(professionalRepo)
-	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc, validator)
+	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc, userSvc, validator)
 
 	// ── Wire: avaliabilities slice ────────────────────────────────────────────────────────────────
 	avalabilityRepo := avalabilityRepo.NewRepository(db)

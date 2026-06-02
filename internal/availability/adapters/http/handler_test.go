@@ -95,6 +95,9 @@ func (s *stubUserSvcAvail) Update(_ context.Context, _ userports.UpdateUserInput
 func (s *stubUserSvcAvail) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
+func (s *stubUserSvcAvail) UpdateUserRole(_ context.Context, _ string, _ userdomain.Role) error {
+	return errors.New("not implemented")
+}
 
 func makeTestAvailability() *domain.Availability {
 	shifts := []shared.Shift{shared.ShiftMorning}

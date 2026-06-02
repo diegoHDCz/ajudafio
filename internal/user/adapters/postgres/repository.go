@@ -117,3 +117,17 @@ func parseUUID(s string) (pgtype.UUID, error) {
 	}
 	return pgtype.UUID{Bytes: uid, Valid: true}, nil
 }
+
+func (r *repository) UpdateUserRole(ctx context.Context, id string, role domain.Role) error {
+	uid, err := parseUUID(id)
+	if err != nil {
+		return fmt.Errorf("userpostgres.UpdateUserRole: invalid id: %w", err)
+	}
+	if err := r.queries.UpdateUserRole(ctx, UpdateUserRoleParams{
+		ID:   uid,
+		Role: string(role),
+	}); err != nil {
+		return fmt.Errorf("userpostgres.UpdateUserRole: %w", err)
+	}
+	return nil
+}

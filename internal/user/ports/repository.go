@@ -12,4 +12,5 @@ type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
+	UpdateUserRole(ctx context.Context, id string, role domain.Role) error
 }

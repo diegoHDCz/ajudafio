@@ -90,6 +90,9 @@ func (s *stubUserSvcAddr) Update(_ context.Context, _ userports.UpdateUserInput)
 func (s *stubUserSvcAddr) Delete(_ context.Context, _ string) error {
 	return errors.New("not implemented")
 }
+func (s *stubUserSvcAddr) UpdateUserRole(_ context.Context, _ string, _ userdomain.Role) error {
+	return errors.New("not implemented")
+}
 
 func newAddrRouter(svc ports.AddressService) http.Handler {
 	validator := shared.NewValidator(&stubUserSvcAddr{})

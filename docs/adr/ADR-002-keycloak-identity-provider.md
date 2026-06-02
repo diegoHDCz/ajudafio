@@ -1,6 +1,6 @@
 # ADR-002: Keycloak como Identity Provider para Autenticação
 
-**Status:** aceito  
+**Status:** supersedido por [ADR-003 — Migração para Clerk](ADR-003-clerk-auth-migration.md)  
 **Data:** 2026-05-17  
 **Decisores:** @Diego Hernan Demitto Czajka  
 **Tags:** [arquitetura, segurança, autenticação, infra, keycloak]
