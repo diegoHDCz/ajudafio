@@ -18,5 +18,6 @@ const (
 	ShiftMorning   Shift = "MORNING"
 	ShiftAfternoon Shift = "AFTERNOON"
 	ShiftNight     Shift = "NIGHT"
+	ShiftFullDay   Shift = "FULL_DAY"
 	ShiftCustom    Shift = "CUSTOM"
 )

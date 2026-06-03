@@ -37,12 +37,11 @@ func (m *mockAvailRepo) Delete(ctx context.Context, id string) error {
 }
 
 func makeAvailability() *domain.Availability {
-	shifts := []shared.Shift{shared.ShiftMorning}
 	return &domain.Availability{
 		ID:             "avail-1",
 		ProfessionalID: "prof-1",
-		DayOfWeek:      []shared.WeekDay{shared.Monday, shared.Wednesday},
-		Shift:          &shifts,
+		DayOfWeek:      shared.Monday,
+		Shift:          shared.ShiftMorning,
 	}
 }
 
@@ -110,8 +109,11 @@ func TestAvailabilityCreate_Success(t *testing.T) {
 			if a.ProfessionalID != input.ProfessionalID {
 				t.Errorf("ProfessionalID: got %s, want %s", a.ProfessionalID, input.ProfessionalID)
 			}
-			if len(a.DayOfWeek) != len(input.DayOfWeek) {
-				t.Errorf("DayOfWeek len: got %d, want %d", len(a.DayOfWeek), len(input.DayOfWeek))
+			if a.DayOfWeek != input.DayOfWeek {
+				t.Errorf("DayOfWeek: got %s, want %s", a.DayOfWeek, input.DayOfWeek)
+			}
+			if a.Shift != input.Shift {
+				t.Errorf("Shift: got %s, want %s", a.Shift, input.Shift)
 			}
 			return want, nil
 		},

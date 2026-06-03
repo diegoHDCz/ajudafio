@@ -5,18 +5,21 @@ import (
 	"net/http"
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
-	"github.com/diegoHDCz/ajudafio/internal/professional/ports"
+	professionalPorts "github.com/diegoHDCz/ajudafio/internal/professional/ports"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
+	usrDomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
+	userPorts "github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/go-chi/chi/v5"
 )
 
 type ProfessionalHandler struct {
-	svc       ports.ProfessionalService
-	validator *shared.Validator
+	professionalSvc professionalPorts.ProfessionalService
+	userSvc         userPorts.UserService
+	validator       *shared.Validator
 }
 
-func NewProfessionalHandler(svc ports.ProfessionalService, validator *shared.Validator) *ProfessionalHandler {
-	return &ProfessionalHandler{svc: svc, validator: validator}
+func NewProfessionalHandler(svc professionalPorts.ProfessionalService, userSvc userPorts.UserService, validator *shared.Validator) *ProfessionalHandler {
+	return &ProfessionalHandler{professionalSvc: svc, userSvc: userSvc, validator: validator}
 }
 
 func NewRouter(handler *ProfessionalHandler) http.Handler {
@@ -39,7 +42,7 @@ func NewRouter(handler *ProfessionalHandler) http.Handler {
 // @Router       /professionals/{id} [get]
 func (h *ProfessionalHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	p, err := h.svc.GetByID(r.Context(), id)
+	p, err := h.professionalSvc.GetByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "professional not found", http.StatusNotFound)
 		return
@@ -57,7 +60,7 @@ func (h *ProfessionalHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Router       /professionals/user/{userID} [get]
 func (h *ProfessionalHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
-	p, err := h.svc.GetByUserID(r.Context(), userID)
+	p, err := h.professionalSvc.GetByUserID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "professional not found", http.StatusNotFound)
 		return
@@ -81,7 +84,7 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	p, err := h.svc.Create(r.Context(), ports.CreateProfessionalInput{
+	p, err := h.professionalSvc.Create(r.Context(), professionalPorts.CreateProfessionalInput{
 		UserID:            body.UserID,
 		LicenseNumber:     body.LicenseNumber,
 		Category:          body.Category,
@@ -93,6 +96,12 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
+	err = h.userSvc.UpdateUserRole(r.Context(), body.UserID, usrDomain.RoleProfessional)
+	if err != nil {
+		http.Error(w, "failed to update user role", http.StatusInternalServerError)
+		return
+	}
+
 	respond(w, http.StatusCreated, toResponse(p))
 }
 
@@ -119,7 +128,7 @@ func (h *ProfessionalHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !authmiddleware.IsAdmin(claims) {
-		p, err := h.svc.GetByID(r.Context(), id)
+		p, err := h.professionalSvc.GetByID(r.Context(), id)
 		if err != nil {
 			http.Error(w, "professional not found", http.StatusNotFound)
 			return
@@ -135,7 +144,7 @@ func (h *ProfessionalHandler) Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	p, err := h.svc.Update(r.Context(), ports.UpdateProfessionalInput{
+	p, err := h.professionalSvc.Update(r.Context(), professionalPorts.UpdateProfessionalInput{
 		ID:                id,
 		LicenseNumber:     body.LicenseNumber,
 		Category:          body.Category,
@@ -169,7 +178,7 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.svc.GetByID(r.Context(), id)
+	p, err := h.professionalSvc.GetByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "professional not found", http.StatusNotFound)
 		return
@@ -180,10 +189,17 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.Delete(r.Context(), id); err != nil {
+	if err := h.professionalSvc.Delete(r.Context(), id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	err = h.userSvc.UpdateUserRole(r.Context(), p.UserID, usrDomain.RoleClient)
+	if err != nil {
+		http.Error(w, "failed to update user role", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -199,7 +215,7 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // @Router       /professionals [get]
 func (h *ProfessionalHandler) FindWithFilters(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	filters := ports.ProfessionalFilters{}
+	filters := professionalPorts.ProfessionalFilters{}
 	if city := q.Get("city"); city != "" {
 		filters.City = &city
 	}
@@ -212,7 +228,7 @@ func (h *ProfessionalHandler) FindWithFilters(w http.ResponseWriter, r *http.Req
 	if shifts := q["shift"]; len(shifts) > 0 {
 		filters.Shift = shifts
 	}
-	list, err := h.svc.FindWithFilters(r.Context(), filters)
+	list, err := h.professionalSvc.FindWithFilters(r.Context(), filters)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

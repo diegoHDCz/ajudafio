@@ -19,10 +19,8 @@ func NewRepository(db *pgxpool.Pool) ports.AvailabilityRepository {
 		db:      db,
 		queries: New(db),
 	}
-
 }
 
-// GetByID implements [ports.AvailabilityRepository].
 func (r *repository) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
 	availabilityID, err := shared.ParseUUID(id)
 	if err != nil {
@@ -35,116 +33,113 @@ func (r *repository) GetByID(ctx context.Context, id string) (*domain.Availabili
 	return &domain.Availability{
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
+		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
+		Shift:          shared.Shift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
-		DayOfWeek:      shared.SliceToDayOfWeek(row.DayOfWeek),
 	}, nil
 }
 
-// Create implements [ports.AvailabilityRepository].
 func (r *repository) Create(ctx context.Context, availability *domain.Availability) (*domain.Availability, error) {
 	professionalID, err := shared.ParseUUID(availability.ProfessionalID)
 	if err != nil {
 		return nil, err
 	}
 
-	days, err := shared.ParseDayOfWeek(availability.DayOfWeek)
-
-	if err != nil {
-		return nil, err
-	}
-
 	row, err := r.queries.CreateProfessionalAvailability(ctx, CreateProfessionalAvailabilityParams{
 		ProfessionalID: professionalID,
+		DayOfWeek:      string(availability.DayOfWeek),
+		Shift:          string(availability.Shift),
 		StartHour:      availability.StartHour,
 		EndHour:        availability.EndHour,
-		DayOfWeek:      days,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
-	return toDomain(row), nil
+	return rowToDomain(row), nil
 }
 
-// Delete implements [ports.AvailabilityRepository].
 func (r *repository) Delete(ctx context.Context, id string) error {
 	availabilityID, err := shared.ParseUUID(id)
 	if err != nil {
 		return err
 	}
-	r.queries.DeleteProfessionalAvailability(ctx, availabilityID)
-	return nil
+	return r.queries.DeleteProfessionalAvailability(ctx, availabilityID)
 }
 
-// GetByProfessionalID implements [ports.AvailabilityRepository].
 func (r *repository) GetByProfessionalID(ctx context.Context, professionalID string) ([]*domain.Availability, error) {
 	professionalIDParsed, err := shared.ParseUUID(professionalID)
 	if err != nil {
 		return nil, err
 	}
-	row, err := r.queries.GetProfessionalAvailabilityByProfessionalID(ctx, professionalIDParsed)
+	rows, err := r.queries.GetProfessionalAvailabilityByProfessionalID(ctx, professionalIDParsed)
 	if err != nil {
 		return nil, err
 	}
 	var availabilities []*domain.Availability
-	for _, r := range row {
-		availabilities = append(availabilities, createdAvalibilityToDomain(r))
+	for _, row := range rows {
+		availabilities = append(availabilities, listRowToDomain(row))
 	}
 	return availabilities, nil
 }
 
-// Update implements [ports.AvailabilityRepository].
 func (r *repository) Update(ctx context.Context, availability *domain.Availability) (*domain.Availability, error) {
 	availabilityID, err := shared.ParseUUID(availability.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	days, err := shared.ParseDayOfWeek(availability.DayOfWeek)
-
-	if err != nil {
-		return nil, err
-	}
-	row, err := r.queries.UpdateProfessionalAvailability(ctx, UpdateProfessionalAvailabilityParams{
-		DayOfWeek: days,
+	params := UpdateProfessionalAvailabilityParams{
+		ID:        availabilityID,
 		StartHour: availability.StartHour,
 		EndHour:   availability.EndHour,
-		ID:        availabilityID,
-	})
+	}
+	if availability.DayOfWeek != "" {
+		d := string(availability.DayOfWeek)
+		params.DayOfWeek = &d
+	}
+	if availability.Shift != "" {
+		s := string(availability.Shift)
+		params.Shift = &s
+	}
+
+	row, err := r.queries.UpdateProfessionalAvailability(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return updateRowtoDomain(row), nil
+	return updateRowToDomain(row), nil
 }
 
-func toDomain(row CreateProfessionalAvailabilityRow) *domain.Availability {
+func rowToDomain(row CreateProfessionalAvailabilityRow) *domain.Availability {
 	return &domain.Availability{
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
+		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
+		Shift:          shared.Shift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
-		DayOfWeek:      shared.SliceToDayOfWeek(row.DayOfWeek),
 	}
 }
 
-func updateRowtoDomain(row UpdateProfessionalAvailabilityRow) *domain.Availability {
+func updateRowToDomain(row UpdateProfessionalAvailabilityRow) *domain.Availability {
 	return &domain.Availability{
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
+		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
+		Shift:          shared.Shift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
-		DayOfWeek:      shared.SliceToDayOfWeek(row.DayOfWeek),
 	}
 }
 
-func createdAvalibilityToDomain(row GetProfessionalAvailabilityByProfessionalIDRow) *domain.Availability {
+func listRowToDomain(row GetProfessionalAvailabilityByProfessionalIDRow) *domain.Availability {
 	return &domain.Availability{
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
+		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
+		Shift:          shared.Shift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
-		DayOfWeek:      shared.SliceToDayOfWeek(row.DayOfWeek),
 	}
 }

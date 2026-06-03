@@ -78,9 +78,14 @@ func (s *stubProfSvc) FindWithFilters(_ context.Context, _ profports.Professiona
 
 // --- Stub user service (for validator) ---
 
-type stubUserSvcAvail struct{}
+type stubUserSvcAvail struct {
+	getByEmail func(context.Context, string) (*userdomain.User, error)
+}
 
-func (s *stubUserSvcAvail) GetByEmail(_ context.Context, _ string) (*userdomain.User, error) {
+func (s *stubUserSvcAvail) GetByEmail(ctx context.Context, email string) (*userdomain.User, error) {
+	if s.getByEmail != nil {
+		return s.getByEmail(ctx, email)
+	}
 	return nil, errors.New("not found")
 }
 func (s *stubUserSvcAvail) GetByID(_ context.Context, _ string) (*userdomain.User, error) {
@@ -100,12 +105,11 @@ func (s *stubUserSvcAvail) UpdateUserRole(_ context.Context, _ string, _ userdom
 }
 
 func makeTestAvailability() *domain.Availability {
-	shifts := []shared.Shift{shared.ShiftMorning}
 	return &domain.Availability{
 		ID:             "avail-1",
 		ProfessionalID: "prof-1",
-		DayOfWeek:      []shared.WeekDay{shared.Monday},
-		Shift:          &shifts,
+		DayOfWeek:      shared.Monday,
+		Shift:          shared.ShiftMorning,
 	}
 }
 
@@ -114,10 +118,18 @@ func adminClaims() *authdomain.JWTClaims {
 }
 
 func newAvailRouter(repo *stubAvailRepo) http.Handler {
+	return newAvailRouterFull(repo, &stubProfSvc{}, &stubUserSvcAvail{})
+}
+
+func newAvailRouterFull(repo *stubAvailRepo, profSvc *stubProfSvc, userSvc *stubUserSvcAvail) http.Handler {
 	svc := avail.NewAvailabilityService(repo)
-	validator := shared.NewValidator(&stubUserSvcAvail{})
-	h := availhttp.NewAvailabilityHandler(svc, validator, &stubProfSvc{})
+	validator := shared.NewValidator(userSvc)
+	h := availhttp.NewAvailabilityHandler(svc, validator, profSvc)
 	return availhttp.NewAvailabilityRouter(h)
+}
+
+func ownerClaims() *authdomain.JWTClaims {
+	return &authdomain.JWTClaims{Email: "owner@test.com"}
 }
 
 // --- GetByProfessionalID ---
@@ -198,15 +210,16 @@ func TestAvailHandlerCreate_Success(t *testing.T) {
 			if a.ProfessionalID != "prof-1" {
 				t.Errorf("ProfessionalID: got %s, want prof-1", a.ProfessionalID)
 			}
-			if len(a.DayOfWeek) != 1 {
-				t.Errorf("DayOfWeek len: got %d, want 1", len(a.DayOfWeek))
+			if a.DayOfWeek != shared.Monday {
+				t.Errorf("DayOfWeek: got %s, want MONDAY", a.DayOfWeek)
 			}
 			return created, nil
 		},
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     []string{"MONDAY"},
+		"day_of_week":     "MONDAY",
+		"shift":           "MORNING",
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -230,7 +243,7 @@ func TestAvailHandlerCreate_WithShift(t *testing.T) {
 	created := makeTestAvailability()
 	repo := &stubAvailRepo{
 		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
-			if a.Shift == nil || len(*a.Shift) != 1 {
+			if a.Shift == "" {
 				t.Error("expected shift to be set")
 			}
 			return created, nil
@@ -238,8 +251,8 @@ func TestAvailHandlerCreate_WithShift(t *testing.T) {
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     []string{"MONDAY"},
-		"shift":           []string{"MORNING"},
+		"day_of_week":     "MONDAY",
+		"shift":           "MORNING",
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -266,7 +279,7 @@ func TestAvailHandlerCreate_InvalidJSON(t *testing.T) {
 
 func TestAvailHandlerCreate_MissingProfessionalID(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
-	body, _ := json.Marshal(map[string]interface{}{"day_of_week": []string{"MONDAY"}})
+	body, _ := json.Marshal(map[string]interface{}{"day_of_week": "MONDAY", "shift": "MORNING"})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -281,7 +294,23 @@ func TestAvailHandlerCreate_MissingDayOfWeek(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     []string{},
+		"shift":           "MORNING",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAvailHandlerCreate_MissingShift(t *testing.T) {
+	router := newAvailRouter(&stubAvailRepo{})
+	body, _ := json.Marshal(map[string]interface{}{
+		"professional_id": "prof-1",
+		"day_of_week":     "MONDAY",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -301,7 +330,8 @@ func TestAvailHandlerCreate_ServiceError(t *testing.T) {
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     []string{"MONDAY"},
+		"day_of_week":     "MONDAY",
+		"shift":           "MORNING",
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -318,7 +348,7 @@ func TestAvailHandlerCreate_ServiceError(t *testing.T) {
 
 func TestAvailHandlerUpdate_NoClaims(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
-	body, _ := json.Marshal(map[string]interface{}{"day_of_week": []string{"TUESDAY"}})
+	body, _ := json.Marshal(map[string]interface{}{"day_of_week": "TUESDAY"})
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -339,7 +369,7 @@ func TestAvailHandlerUpdate_Success(t *testing.T) {
 			return a, nil
 		},
 	}
-	body, _ := json.Marshal(map[string]interface{}{"day_of_week": []string{"TUESDAY", "THURSDAY"}})
+	body, _ := json.Marshal(map[string]interface{}{"day_of_week": "TUESDAY", "shift": "AFTERNOON"})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -371,7 +401,7 @@ func TestAvailHandlerUpdate_ServiceError(t *testing.T) {
 			return nil, errors.New("update failed")
 		},
 	}
-	body, _ := json.Marshal(map[string]interface{}{"day_of_week": []string{"TUESDAY"}})
+	body, _ := json.Marshal(map[string]interface{}{"day_of_week": "TUESDAY"})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPatch, "/avail-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -397,6 +427,23 @@ func TestAvailHandlerDelete_NoClaims(t *testing.T) {
 	}
 }
 
+func ownerRouter(repo *stubAvailRepo) http.Handler {
+	profSvc := &stubProfSvc{
+		getByID: func(_ context.Context, _ string) (*profdomain.Professional, error) {
+			return &profdomain.Professional{UserID: "user-1"}, nil
+		},
+	}
+	userSvc := &stubUserSvcAvail{
+		getByEmail: func(_ context.Context, _ string) (*userdomain.User, error) {
+			return &userdomain.User{ID: "user-1"}, nil
+		},
+	}
+	repo.getByID = func(_ context.Context, _ string) (*domain.Availability, error) {
+		return makeTestAvailability(), nil
+	}
+	return newAvailRouterFull(repo, profSvc, userSvc)
+}
+
 func TestAvailHandlerDelete_Success(t *testing.T) {
 	repo := &stubAvailRepo{
 		delete: func(_ context.Context, id string) error {
@@ -406,9 +453,9 @@ func TestAvailHandlerDelete_Success(t *testing.T) {
 			return nil
 		},
 	}
-	router := newAvailRouter(repo)
+	router := ownerRouter(repo)
 	req := httptest.NewRequest(http.MethodDelete, "/avail-1", nil)
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), ownerClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -421,9 +468,9 @@ func TestAvailHandlerDelete_ServiceError(t *testing.T) {
 	repo := &stubAvailRepo{
 		delete: func(_ context.Context, _ string) error { return errors.New("delete failed") },
 	}
-	router := newAvailRouter(repo)
+	router := ownerRouter(repo)
 	req := httptest.NewRequest(http.MethodDelete, "/avail-1", nil)
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), adminClaims()))
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), ownerClaims()))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 

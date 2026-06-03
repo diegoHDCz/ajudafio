@@ -70,8 +70,8 @@ func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if body.ProfessionalID == "" || len(body.DayOfWeek) == 0 {
-		http.Error(w, "professional_id and day_of_week are required", http.StatusBadRequest)
+	if body.ProfessionalID == "" || body.DayOfWeek == "" || body.Shift == "" {
+		http.Error(w, "professional_id, day_of_week and shift are required", http.StatusBadRequest)
 		return
 	}
 	a, err := h.s.Create(r.Context(), &domain.Availability{
@@ -155,11 +155,9 @@ func (h *AvailabilityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !authmiddleware.IsAdmin(claims) {
-		if err := h.checkOwnership(r, id); err != nil {
-			http.Error(w, err.Error(), err.(httpErr).status)
-			return
-		}
+	if err := h.checkOwnership(r, id); err != nil {
+		http.Error(w, err.Error(), err.(httpErr).status)
+		return
 	}
 
 	if err := h.s.Delete(r.Context(), id); err != nil {

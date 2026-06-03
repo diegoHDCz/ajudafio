@@ -11,50 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getAvailabilityByID = `-- name: GetAvailabilityByID :one
-SELECT id, professional_id, day_of_week, start_hour, end_hour
-FROM availabilities
-WHERE id = $1
-`
-
-type GetAvailabilityByIDRow struct {
-	ID             pgtype.UUID `json:"id"`
-	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
-	StartHour      *string     `json:"start_hour"`
-	EndHour        *string     `json:"end_hour"`
-}
-
-func (q *Queries) GetAvailabilityByID(ctx context.Context, id pgtype.UUID) (GetAvailabilityByIDRow, error) {
-	row := q.db.QueryRow(ctx, getAvailabilityByID, id)
-	var i GetAvailabilityByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.ProfessionalID,
-		&i.DayOfWeek,
-		&i.StartHour,
-		&i.EndHour,
-	)
-	return i, err
-}
-
 const createProfessionalAvailability = `-- name: CreateProfessionalAvailability :one
-INSERT INTO availabilities (
-    professional_id,
-    day_of_week,
-    start_hour,
-    end_hour
-) VALUES (
-    $1,
-    $2,
-    $3,
-    $4
-) RETURNING id, professional_id, day_of_week, start_hour, end_hour
+INSERT INTO availabilities (professional_id, day_of_week, shift, start_hour, end_hour)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, professional_id, day_of_week, shift, start_hour, end_hour
 `
 
 type CreateProfessionalAvailabilityParams struct {
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -62,7 +28,8 @@ type CreateProfessionalAvailabilityParams struct {
 type CreateProfessionalAvailabilityRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -71,6 +38,7 @@ func (q *Queries) CreateProfessionalAvailability(ctx context.Context, arg Create
 	row := q.db.QueryRow(ctx, createProfessionalAvailability,
 		arg.ProfessionalID,
 		arg.DayOfWeek,
+		arg.Shift,
 		arg.StartHour,
 		arg.EndHour,
 	)
@@ -79,6 +47,7 @@ func (q *Queries) CreateProfessionalAvailability(ctx context.Context, arg Create
 		&i.ID,
 		&i.ProfessionalID,
 		&i.DayOfWeek,
+		&i.Shift,
 		&i.StartHour,
 		&i.EndHour,
 	)
@@ -86,8 +55,7 @@ func (q *Queries) CreateProfessionalAvailability(ctx context.Context, arg Create
 }
 
 const deleteProfessionalAvailability = `-- name: DeleteProfessionalAvailability :exec
-DELETE FROM availabilities
-WHERE id = $1
+DELETE FROM availabilities WHERE id = $1
 `
 
 func (q *Queries) DeleteProfessionalAvailability(ctx context.Context, id pgtype.UUID) error {
@@ -96,58 +64,36 @@ func (q *Queries) DeleteProfessionalAvailability(ctx context.Context, id pgtype.
 }
 
 const getAllProfessionalAvailabilities = `-- name: GetAllProfessionalAvailabilities :many
-
-SELECT
-    a.id,
-    a.professional_id,
-    a.day_of_week,
-    a.start_hour,  
-    a.end_hour
-FROM
-    availabilities a
+SELECT a.id, a.professional_id, a.day_of_week, a.shift, a.start_hour, a.end_hour
+FROM availabilities a
 INNER JOIN professionals p ON a.professional_id = p.id
 WHERE
     p.is_active = true
-    
-    -- Filtro de DayOfWeek
-    AND (cardinality($1::text[]) = 0 OR a.day_of_week = ANY($1::text[]))
-    
-    -- Filtro de Horário
-    AND ($2::text IS NULL OR a.start_hour >= $2::text)
-    AND ($3::text IS NULL OR a.end_hour <= $3::text)
-    
-    -- Filtro de Cidade
-    AND ($4::text IS NULL OR EXISTS (
-        SELECT 1
-        FROM addresses ad
-        WHERE ad.user_id = p.user_id
-          AND ad.city = $4::text
+    AND ($1::text IS NULL OR a.day_of_week = $1::text)
+    AND ($2::text IS NULL OR a.shift = $2::text)
+    AND ($3::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses ad
+        WHERE ad.user_id = p.user_id AND ad.city = $3::text
     ))
 `
 
 type GetAllProfessionalAvailabilitiesParams struct {
-	DayOfWeeks []string `json:"day_of_weeks"`
-	StartTime  *string  `json:"start_time"`
-	EndTime    *string  `json:"end_time"`
-	City       *string  `json:"city"`
+	DayOfWeek *string `json:"day_of_week"`
+	Shift     *string `json:"shift"`
+	City      *string `json:"city"`
 }
 
 type GetAllProfessionalAvailabilitiesRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
 
-// Alterado de $1 para @professional_id para manter o padrão
 func (q *Queries) GetAllProfessionalAvailabilities(ctx context.Context, arg GetAllProfessionalAvailabilitiesParams) ([]GetAllProfessionalAvailabilitiesRow, error) {
-	rows, err := q.db.Query(ctx, getAllProfessionalAvailabilities,
-		arg.DayOfWeeks,
-		arg.StartTime,
-		arg.EndTime,
-		arg.City,
-	)
+	rows, err := q.db.Query(ctx, getAllProfessionalAvailabilities, arg.DayOfWeek, arg.Shift, arg.City)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +105,7 @@ func (q *Queries) GetAllProfessionalAvailabilities(ctx context.Context, arg GetA
 			&i.ID,
 			&i.ProfessionalID,
 			&i.DayOfWeek,
+			&i.Shift,
 			&i.StartHour,
 			&i.EndHour,
 		); err != nil {
@@ -172,23 +119,46 @@ func (q *Queries) GetAllProfessionalAvailabilities(ctx context.Context, arg GetA
 	return items, nil
 }
 
+const getAvailabilityByID = `-- name: GetAvailabilityByID :one
+SELECT id, professional_id, day_of_week, shift, start_hour, end_hour
+FROM availabilities
+WHERE id = $1
+`
+
+type GetAvailabilityByIDRow struct {
+	ID             pgtype.UUID `json:"id"`
+	ProfessionalID pgtype.UUID `json:"professional_id"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
+	StartHour      *string     `json:"start_hour"`
+	EndHour        *string     `json:"end_hour"`
+}
+
+func (q *Queries) GetAvailabilityByID(ctx context.Context, id pgtype.UUID) (GetAvailabilityByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAvailabilityByID, id)
+	var i GetAvailabilityByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProfessionalID,
+		&i.DayOfWeek,
+		&i.Shift,
+		&i.StartHour,
+		&i.EndHour,
+	)
+	return i, err
+}
+
 const getProfessionalAvailabilityByProfessionalID = `-- name: GetProfessionalAvailabilityByProfessionalID :many
-SELECT
-    a.id,
-    a.professional_id,
-    a.day_of_week,
-    a.start_hour, -- Corrigido de start_time para start_hour
-    a.end_hour   -- Corrigido de end_time para end_hour
-FROM
-    availabilities a  
-WHERE 
-    a.professional_id = $1
+SELECT id, professional_id, day_of_week, shift, start_hour, end_hour
+FROM availabilities
+WHERE professional_id = $1
 `
 
 type GetProfessionalAvailabilityByProfessionalIDRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -206,6 +176,7 @@ func (q *Queries) GetProfessionalAvailabilityByProfessionalID(ctx context.Contex
 			&i.ID,
 			&i.ProfessionalID,
 			&i.DayOfWeek,
+			&i.Shift,
 			&i.StartHour,
 			&i.EndHour,
 		); err != nil {
@@ -222,14 +193,17 @@ func (q *Queries) GetProfessionalAvailabilityByProfessionalID(ctx context.Contex
 const updateProfessionalAvailability = `-- name: UpdateProfessionalAvailability :one
 UPDATE availabilities SET
     day_of_week = COALESCE($1, day_of_week),
-    start_hour  = COALESCE($2, start_hour),
-    end_hour    = COALESCE($3, end_hour)
-WHERE id = $4
-RETURNING id, professional_id, day_of_week, start_hour, end_hour
+    shift       = COALESCE($2, shift),
+    start_hour  = COALESCE($3, start_hour),
+    end_hour    = COALESCE($4, end_hour),
+    updated_at  = NOW()
+WHERE id = $5
+RETURNING id, professional_id, day_of_week, shift, start_hour, end_hour
 `
 
 type UpdateProfessionalAvailabilityParams struct {
-	DayOfWeek []string    `json:"day_of_week"`
+	DayOfWeek *string     `json:"day_of_week"`
+	Shift     *string     `json:"shift"`
 	StartHour *string     `json:"start_hour"`
 	EndHour   *string     `json:"end_hour"`
 	ID        pgtype.UUID `json:"id"`
@@ -238,7 +212,8 @@ type UpdateProfessionalAvailabilityParams struct {
 type UpdateProfessionalAvailabilityRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
+	DayOfWeek      string      `json:"day_of_week"`
+	Shift          string      `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -246,6 +221,7 @@ type UpdateProfessionalAvailabilityRow struct {
 func (q *Queries) UpdateProfessionalAvailability(ctx context.Context, arg UpdateProfessionalAvailabilityParams) (UpdateProfessionalAvailabilityRow, error) {
 	row := q.db.QueryRow(ctx, updateProfessionalAvailability,
 		arg.DayOfWeek,
+		arg.Shift,
 		arg.StartHour,
 		arg.EndHour,
 		arg.ID,
@@ -255,6 +231,7 @@ func (q *Queries) UpdateProfessionalAvailability(ctx context.Context, arg Update
 		&i.ID,
 		&i.ProfessionalID,
 		&i.DayOfWeek,
+		&i.Shift,
 		&i.StartHour,
 		&i.EndHour,
 	)

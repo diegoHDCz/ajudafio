@@ -40,7 +40,11 @@ func NewRouter(h *Handler) http.Handler {
 // @Router       /users/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims := authmiddleware.GetClaims(r.Context())
-
+	user, err := h.svc.GetByEmail(r.Context(), claims.Email)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
 	if claims == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -48,6 +52,8 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, meResponse{
 		Name:  claims.Name,
 		Email: claims.Email,
+		ID:    user.ID,
+		Role:  user.Role,
 	})
 }
 
