@@ -27,6 +27,9 @@ import (
 	appointmenthttp "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/http"
 	appointmentpostgres "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	bookingrequest "github.com/diegoHDCz/ajudafio/internal/bookingrequest"
+	bookingrequesthttp "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/http"
+	bookingrequestpostgres "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/postgres"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
@@ -113,6 +116,11 @@ func main() {
 	appointmentSvc := appointment.NewAppointmentService(appointmentRepo, avalabilityRepo)
 	appointmentHandler := appointmenthttp.NewHandler(appointmentSvc)
 
+	// ── Wire: booking request slice ───────────────────────────────────────────────────────────
+	bookingRequestRepo := bookingrequestpostgres.NewRepository(db)
+	bookingRequestSvc := bookingrequest.NewBookingRequestService(bookingRequestRepo)
+	bookingRequestHandler := bookingrequesthttp.NewHandler(bookingRequestSvc, validator, professionalSvc)
+
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -168,6 +176,7 @@ func main() {
 		r.Mount("/addresses", addresshttp.NewRouter(addressHandler))
 		r.Mount("/contracts", contracthttp.NewRouter(contractHandler))
 		r.Mount("/appointments", appointmenthttp.NewRouter(appointmentHandler))
+		r.Mount("/booking-requests", bookingrequesthttp.NewRouter(bookingRequestHandler))
 	})
 
 	// ── Server ────────────────────────────────────────────────────────────────

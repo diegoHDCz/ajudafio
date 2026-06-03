@@ -1,0 +1,62 @@
+@baseUrl = http://localhost:8080
+@token = Bearer <seu-jwt-aqui>
+
+### Criar solicitação de agendamento
+POST {{baseUrl}}/booking-requests/
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "client_id": "<uuid-do-cliente>",
+  "professional_id": "<uuid-do-profissional>",
+  "address_id": "<uuid-do-endereco>",
+  "proposed_value": 150.00,
+  "schedule_details": {
+    "recurrence": [
+      { "day_of_week": "MONDAY", "start_time": "13:00", "end_time": "17:00" },
+      { "day_of_week": "WEDNESDAY", "start_time": "13:00", "end_time": "17:00" }
+    ],
+    "start_date": "2026-06-10",
+    "end_date": "2026-07-10"
+  }
+}
+
+### Buscar por ID
+GET {{baseUrl}}/booking-requests/<id>
+Authorization: {{token}}
+
+### Listar por cliente
+GET {{baseUrl}}/booking-requests/client/<client-id>
+Authorization: {{token}}
+
+### Listar por profissional
+GET {{baseUrl}}/booking-requests/professional/<professional-id>
+Authorization: {{token}}
+
+### Aceitar (token do profissional)
+PATCH {{baseUrl}}/booking-requests/<id>/status
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "status": "ACCEPTED"
+}
+
+### Rejeitar com motivo (token do profissional)
+PATCH {{baseUrl}}/booking-requests/<id>/status
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "status": "REJECTED",
+  "rejection_reason": "Não tenho disponibilidade nesse período."
+}
+
+### Cancelar (token do cliente)
+PATCH {{baseUrl}}/booking-requests/<id>/status
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "status": "CANCELLED"
+}
