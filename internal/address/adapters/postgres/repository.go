@@ -10,7 +10,6 @@ import (
 	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,17 +33,8 @@ func (r *repository) CreateAddress(address *domain.Address) error {
 		return fmt.Errorf("addresspostgres.CreateAddress: invalid userID: %w", err)
 	}
 
-	var contractUID pgtype.UUID
-	if address.ContractID != nil {
-		contractUID, err = shared.ParseUUID(*address.ContractID)
-		if err != nil {
-			return fmt.Errorf("addresspostgres.CreateAddress: invalid contractID: %w", err)
-		}
-	}
-
 	row, err := r.queries.CreateAddress(ctx, CreateAddressParams{
 		UserID:      userUID,
-		ContractID:  contractUID,
 		ZipCode:     address.ZipCode,
 		AddressLine: address.AddressLine,
 		Number:      address.Number,
@@ -139,24 +129,6 @@ func (r *repository) GetAddressesByUserID(userID string) ([]*domain.Address, err
 	return result, nil
 }
 
-func (r *repository) GetAddressesByContractID(contractID string) ([]*domain.Address, error) {
-	ctx := context.Background()
-
-	uid, err := shared.ParseUUID(contractID)
-	if err != nil {
-		return nil, fmt.Errorf("addresspostgres.GetAddressesByContractID: invalid contractID: %w", err)
-	}
-	rows, err := r.queries.GetAddressesByContractID(ctx, uid)
-	if err != nil {
-		return nil, fmt.Errorf("addresspostgres.GetAddressesByContractID: %w", err)
-	}
-	result := make([]*domain.Address, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, toDomain(row))
-	}
-	return result, nil
-}
-
 func (r *repository) GetAllAddresses() ([]*domain.Address, error) {
 	ctx := context.Background()
 
@@ -186,7 +158,7 @@ func (r *repository) GetAddressesByCity(city string) ([]*domain.Address, error) 
 }
 
 func toDomain(row Address) *domain.Address {
-	a := &domain.Address{
+	return &domain.Address{
 		ID:          uuid.UUID(row.ID.Bytes).String(),
 		UserID:      uuid.UUID(row.UserID.Bytes).String(),
 		ZipCode:     row.ZipCode,
@@ -200,9 +172,4 @@ func toDomain(row Address) *domain.Address {
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
 	}
-	if row.ContractID.Valid {
-		contractID := uuid.UUID(row.ContractID.Bytes).String()
-		a.ContractID = &contractID
-	}
-	return a
 }

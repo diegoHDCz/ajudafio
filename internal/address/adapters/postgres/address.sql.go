@@ -14,7 +14,6 @@ import (
 const createAddress = `-- name: CreateAddress :one
 INSERT INTO addresses (
   user_id,
-  contract_id,
   zip_code,
   address_line,
   number,
@@ -32,15 +31,13 @@ INSERT INTO addresses (
   $6,
   $7,
   $8,
-  $9,
-  $10
+  $9
 )
-RETURNING id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+RETURNING id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 `
 
 type CreateAddressParams struct {
 	UserID      pgtype.UUID `json:"user_id"`
-	ContractID  pgtype.UUID `json:"contract_id"`
 	ZipCode     string      `json:"zip_code"`
 	AddressLine string      `json:"address_line"`
 	Number      string      `json:"number"`
@@ -54,7 +51,6 @@ type CreateAddressParams struct {
 func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) (Address, error) {
 	row := q.db.QueryRow(ctx, createAddress,
 		arg.UserID,
-		arg.ContractID,
 		arg.ZipCode,
 		arg.AddressLine,
 		arg.Number,
@@ -68,7 +64,6 @@ func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) (A
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ContractID,
 		&i.ZipCode,
 		&i.AddressLine,
 		&i.Number,
@@ -94,7 +89,7 @@ func (q *Queries) DeleteAddress(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getAddressByID = `-- name: GetAddressByID :one
-SELECT id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+SELECT id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 FROM addresses
 WHERE id = $1
 LIMIT 1
@@ -106,7 +101,6 @@ func (q *Queries) GetAddressByID(ctx context.Context, id pgtype.UUID) (Address, 
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ContractID,
 		&i.ZipCode,
 		&i.AddressLine,
 		&i.Number,
@@ -117,85 +111,6 @@ func (q *Queries) GetAddressByID(ctx context.Context, id pgtype.UUID) (Address, 
 		&i.Reference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getAddressWithContract = `-- name: GetAddressWithContract :one
-SELECT
-  a.id,
-  a.user_id,
-  a.contract_id,
-  a.zip_code,
-  a.address_line,
-  a.number,
-  a.complement,
-  a.district,
-  a.city,
-  a.state,
-  a.reference,
-  a.created_at,
-  a.updated_at,
-  c.client_id          AS contract_client_id,
-  c.professional_id    AS contract_professional_id,
-  c.status             AS contract_status,
-  c.hour_rate          AS contract_hour_rate,
-  c.total_amount       AS contract_total_amount,
-  c.details            AS contract_details,
-  c.created_at         AS contract_created_at
-FROM addresses a
-INNER JOIN contracts c ON c.id = a.contract_id
-WHERE a.id = $1
-LIMIT 1
-`
-
-type GetAddressWithContractRow struct {
-	ID                     pgtype.UUID      `json:"id"`
-	UserID                 pgtype.UUID      `json:"user_id"`
-	ContractID             pgtype.UUID      `json:"contract_id"`
-	ZipCode                string           `json:"zip_code"`
-	AddressLine            string           `json:"address_line"`
-	Number                 string           `json:"number"`
-	Complement             *string          `json:"complement"`
-	District               string           `json:"district"`
-	City                   string           `json:"city"`
-	State                  string           `json:"state"`
-	Reference              *string          `json:"reference"`
-	CreatedAt              pgtype.Timestamp `json:"created_at"`
-	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
-	ContractClientID       pgtype.UUID      `json:"contract_client_id"`
-	ContractProfessionalID pgtype.UUID      `json:"contract_professional_id"`
-	ContractStatus         string           `json:"contract_status"`
-	ContractHourRate       int32            `json:"contract_hour_rate"`
-	ContractTotalAmount    int32            `json:"contract_total_amount"`
-	ContractDetails        []byte           `json:"contract_details"`
-	ContractCreatedAt      pgtype.Timestamp `json:"contract_created_at"`
-}
-
-func (q *Queries) GetAddressWithContract(ctx context.Context, id pgtype.UUID) (GetAddressWithContractRow, error) {
-	row := q.db.QueryRow(ctx, getAddressWithContract, id)
-	var i GetAddressWithContractRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ContractID,
-		&i.ZipCode,
-		&i.AddressLine,
-		&i.Number,
-		&i.Complement,
-		&i.District,
-		&i.City,
-		&i.State,
-		&i.Reference,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.ContractClientID,
-		&i.ContractProfessionalID,
-		&i.ContractStatus,
-		&i.ContractHourRate,
-		&i.ContractTotalAmount,
-		&i.ContractDetails,
-		&i.ContractCreatedAt,
 	)
 	return i, err
 }
@@ -204,7 +119,6 @@ const getAddressWithUser = `-- name: GetAddressWithUser :one
 SELECT
   a.id,
   a.user_id,
-  a.contract_id,
   a.zip_code,
   a.address_line,
   a.number,
@@ -228,7 +142,6 @@ LIMIT 1
 type GetAddressWithUserRow struct {
 	ID          pgtype.UUID      `json:"id"`
 	UserID      pgtype.UUID      `json:"user_id"`
-	ContractID  pgtype.UUID      `json:"contract_id"`
 	ZipCode     string           `json:"zip_code"`
 	AddressLine string           `json:"address_line"`
 	Number      string           `json:"number"`
@@ -251,7 +164,6 @@ func (q *Queries) GetAddressWithUser(ctx context.Context, id pgtype.UUID) (GetAd
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ContractID,
 		&i.ZipCode,
 		&i.AddressLine,
 		&i.Number,
@@ -271,7 +183,7 @@ func (q *Queries) GetAddressWithUser(ctx context.Context, id pgtype.UUID) (GetAd
 }
 
 const getAddressesByCity = `-- name: GetAddressesByCity :many
-SELECT id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+SELECT id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 FROM addresses
 WHERE city = $1
 ORDER BY created_at DESC
@@ -289,48 +201,6 @@ func (q *Queries) GetAddressesByCity(ctx context.Context, city string) ([]Addres
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.ContractID,
-			&i.ZipCode,
-			&i.AddressLine,
-			&i.Number,
-			&i.Complement,
-			&i.District,
-			&i.City,
-			&i.State,
-			&i.Reference,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAddressesByContractID = `-- name: GetAddressesByContractID :many
-SELECT id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
-FROM addresses
-WHERE contract_id = $1
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetAddressesByContractID(ctx context.Context, contractID pgtype.UUID) ([]Address, error) {
-	rows, err := q.db.Query(ctx, getAddressesByContractID, contractID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Address
-	for rows.Next() {
-		var i Address
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.ContractID,
 			&i.ZipCode,
 			&i.AddressLine,
 			&i.Number,
@@ -353,7 +223,7 @@ func (q *Queries) GetAddressesByContractID(ctx context.Context, contractID pgtyp
 }
 
 const getAddressesByUserID = `-- name: GetAddressesByUserID :many
-SELECT id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+SELECT id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 FROM addresses
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -371,7 +241,6 @@ func (q *Queries) GetAddressesByUserID(ctx context.Context, userID pgtype.UUID) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.ContractID,
 			&i.ZipCode,
 			&i.AddressLine,
 			&i.Number,
@@ -394,25 +263,23 @@ func (q *Queries) GetAddressesByUserID(ctx context.Context, userID pgtype.UUID) 
 }
 
 const getAllAddresses = `-- name: GetAllAddresses :many
-SELECT id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+SELECT id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 FROM addresses
 WHERE
-  ($1::text    IS NULL OR zip_code    = $1::text)
-  AND ($2::uuid     IS NULL OR user_id     = $2::uuid)
-  AND ($3::text        IS NULL OR city        = $3::text)
-  AND ($4::text    IS NULL OR district    = $4::text)
-  AND ($5::text      IS NULL OR number      = $5::text)
-  AND ($6::uuid IS NULL OR contract_id = $6::uuid)
+  ($1::text IS NULL OR zip_code    = $1::text)
+  AND ($2::uuid IS NULL OR user_id     = $2::uuid)
+  AND ($3::text IS NULL OR city        = $3::text)
+  AND ($4::text IS NULL OR district    = $4::text)
+  AND ($5::text IS NULL OR number      = $5::text)
 ORDER BY created_at DESC
 `
 
 type GetAllAddressesParams struct {
-	ZipCode    *string     `json:"zip_code"`
-	UserID     pgtype.UUID `json:"user_id"`
-	City       *string     `json:"city"`
-	District   *string     `json:"district"`
-	Number     *string     `json:"number"`
-	ContractID pgtype.UUID `json:"contract_id"`
+	ZipCode  *string     `json:"zip_code"`
+	UserID   pgtype.UUID `json:"user_id"`
+	City     *string     `json:"city"`
+	District *string     `json:"district"`
+	Number   *string     `json:"number"`
 }
 
 func (q *Queries) GetAllAddresses(ctx context.Context, arg GetAllAddressesParams) ([]Address, error) {
@@ -422,7 +289,6 @@ func (q *Queries) GetAllAddresses(ctx context.Context, arg GetAllAddressesParams
 		arg.City,
 		arg.District,
 		arg.Number,
-		arg.ContractID,
 	)
 	if err != nil {
 		return nil, err
@@ -434,7 +300,6 @@ func (q *Queries) GetAllAddresses(ctx context.Context, arg GetAllAddressesParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.ContractID,
 			&i.ZipCode,
 			&i.AddressLine,
 			&i.Number,
@@ -468,7 +333,7 @@ UPDATE addresses SET
   reference    = COALESCE($8, reference),
   updated_at   = NOW()
 WHERE id = $9
-RETURNING id, user_id, contract_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
+RETURNING id, user_id, zip_code, address_line, number, complement, district, city, state, reference, created_at, updated_at
 `
 
 type UpdateAddressParams struct {
@@ -499,7 +364,6 @@ func (q *Queries) UpdateAddress(ctx context.Context, arg UpdateAddressParams) (A
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.ContractID,
 		&i.ZipCode,
 		&i.AddressLine,
 		&i.Number,

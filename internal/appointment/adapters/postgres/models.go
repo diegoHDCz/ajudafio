@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.27.0
 
-package addresspostgres
+package appointmentpostgres
 
 import (
 	"github.com/jackc/pgx/v5/pgtype"
@@ -11,6 +11,7 @@ import (
 type Address struct {
 	ID          pgtype.UUID      `json:"id"`
 	UserID      pgtype.UUID      `json:"user_id"`
+	ContractID  pgtype.UUID      `json:"contract_id"`
 	ZipCode     string           `json:"zip_code"`
 	AddressLine string           `json:"address_line"`
 	Number      string           `json:"number"`
@@ -21,6 +22,28 @@ type Address struct {
 	Reference   *string          `json:"reference"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+}
+
+type Appointment struct {
+	ID             pgtype.UUID        `json:"id"`
+	ContractID     pgtype.UUID        `json:"contract_id"`
+	ClientID       pgtype.UUID        `json:"client_id"`
+	ProfessionalID pgtype.UUID        `json:"professional_id"`
+	Date           pgtype.Date        `json:"date"`
+	StartTime      pgtype.Time        `json:"start_time"`
+	EndTime        pgtype.Time        `json:"end_time"`
+	Status         string             `json:"status"`
+	ZipCode        string             `json:"zip_code"`
+	AddressLine    string             `json:"address_line"`
+	Number         string             `json:"number"`
+	Complement     *string            `json:"complement"`
+	District       string             `json:"district"`
+	City           string             `json:"city"`
+	State          string             `json:"state"`
+	Reference      *string            `json:"reference"`
+	Version        int32              `json:"version"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Availability struct {

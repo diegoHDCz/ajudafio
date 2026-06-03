@@ -13,14 +13,13 @@ import (
 // --- Mock ---
 
 type mockAddressRepo struct {
-	createAddress            func(*domain.Address) error
-	getAddressByID           func(string) (*domain.Address, error)
-	updateAddress            func(*domain.Address) error
-	deleteAddress            func(string) error
-	getAddressesByUserID     func(string) ([]*domain.Address, error)
-	getAddressesByContractID func(string) ([]*domain.Address, error)
-	getAllAddresses           func() ([]*domain.Address, error)
-	getAddressesByCity       func(string) ([]*domain.Address, error)
+	createAddress        func(*domain.Address) error
+	getAddressByID       func(string) (*domain.Address, error)
+	updateAddress        func(*domain.Address) error
+	deleteAddress        func(string) error
+	getAddressesByUserID func(string) ([]*domain.Address, error)
+	getAllAddresses       func() ([]*domain.Address, error)
+	getAddressesByCity   func(string) ([]*domain.Address, error)
 }
 
 func (m *mockAddressRepo) CreateAddress(a *domain.Address) error {
@@ -38,9 +37,6 @@ func (m *mockAddressRepo) DeleteAddress(id string) error {
 func (m *mockAddressRepo) GetAddressesByUserID(userID string) ([]*domain.Address, error) {
 	return m.getAddressesByUserID(userID)
 }
-func (m *mockAddressRepo) GetAddressesByContractID(contractID string) ([]*domain.Address, error) {
-	return m.getAddressesByContractID(contractID)
-}
 func (m *mockAddressRepo) GetAllAddresses() ([]*domain.Address, error) {
 	return m.getAllAddresses()
 }
@@ -51,11 +47,9 @@ func (m *mockAddressRepo) GetAddressesByCity(city string) ([]*domain.Address, er
 func ptr[T any](v T) *T { return &v }
 
 func makeAddress() *domain.Address {
-	contractID := "contract-1"
 	return &domain.Address{
 		ID:          "addr-1",
 		UserID:      "user-1",
-		ContractID:  &contractID,
 		ZipCode:     "80000-000",
 		AddressLine: "Rua das Flores",
 		Number:      "123",
@@ -135,47 +129,11 @@ func TestAddressGetByUserID_RepoError(t *testing.T) {
 	}
 }
 
-// --- GetByContractID ---
-
-func TestAddressGetByContractID_Success(t *testing.T) {
-	list := []*domain.Address{makeAddress(), makeAddress()}
-	svc := NewAddressService(&mockAddressRepo{
-		getAddressesByContractID: func(contractID string) ([]*domain.Address, error) {
-			if contractID != "contract-1" {
-				t.Fatalf("unexpected contractID: %s", contractID)
-			}
-			return list, nil
-		},
-	})
-
-	got, err := svc.GetByContractID(context.Background(), "contract-1")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Errorf("len: got %d, want 2", len(got))
-	}
-}
-
-func TestAddressGetByContractID_RepoError(t *testing.T) {
-	repoErr := errors.New("db error")
-	svc := NewAddressService(&mockAddressRepo{
-		getAddressesByContractID: func(_ string) ([]*domain.Address, error) { return nil, repoErr },
-	})
-
-	_, err := svc.GetByContractID(context.Background(), "contract-1")
-	if !errors.Is(err, repoErr) {
-		t.Errorf("expected repoErr, got: %v", err)
-	}
-}
-
 // --- Create ---
 
 func TestAddressCreate_Success(t *testing.T) {
-	contractID := "contract-1"
 	input := ports.CreateAddressInput{
 		UserID:      "user-1",
-		ContractID:  &contractID,
 		ZipCode:     "80000-000",
 		AddressLine: "Rua das Flores",
 		Number:      "123",

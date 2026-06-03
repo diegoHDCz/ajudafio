@@ -8,7 +8,6 @@ type AddressRepository interface {
 	UpdateAddress(address *domain.Address) error
 	DeleteAddress(id string) error
 	GetAddressesByUserID(userID string) ([]*domain.Address, error)
-	GetAddressesByContractID(contractID string) ([]*domain.Address, error)
 	GetAllAddresses() ([]*domain.Address, error)
 	GetAddressesByCity(city string) ([]*domain.Address, error)
 }

@@ -9,7 +9,6 @@ import (
 type AddressService interface {
 	GetByID(ctx context.Context, id string) (*domain.Address, error)
 	GetByUserID(ctx context.Context, userID string) ([]*domain.Address, error)
-	GetByContractID(ctx context.Context, contractID string) ([]*domain.Address, error)
 	Create(ctx context.Context, input CreateAddressInput) (*domain.Address, error)
 	Update(ctx context.Context, input UpdateAddressInput) (*domain.Address, error)
 	Delete(ctx context.Context, id string) error
@@ -17,7 +16,6 @@ type AddressService interface {
 
 type CreateAddressInput struct {
 	UserID      string
-	ContractID  *string
 	ZipCode     string
 	AddressLine string
 	Number      string

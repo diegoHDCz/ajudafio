@@ -23,7 +23,6 @@ func NewRouter(handler *AddressHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/{id}", handler.GetByID)
 	r.Get("/user/{userID}", handler.GetByUserID)
-	r.Get("/contract/{contractID}", handler.GetByContractID)
 	r.Post("/", handler.Create)
 	r.Patch("/{id}", handler.Update)
 	r.Delete("/{id}", handler.Delete)
@@ -70,28 +69,6 @@ func (h *AddressHandler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, resp)
 }
 
-// @Summary      Buscar endereços por Contract ID
-// @Tags         addresses
-// @Produce      json
-// @Param        contractID  path      string  true  "Contract ID"
-// @Success      200         {array}   addressResponse
-// @Failure      500         {string}  string
-// @Security     BearerAuth
-// @Router       /addresses/contract/{contractID} [get]
-func (h *AddressHandler) GetByContractID(w http.ResponseWriter, r *http.Request) {
-	contractID := chi.URLParam(r, "contractID")
-	addresses, err := h.svc.GetByContractID(r.Context(), contractID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	resp := make([]addressResponse, len(addresses))
-	for i, a := range addresses {
-		resp[i] = toResponse(a)
-	}
-	respond(w, http.StatusOK, resp)
-}
-
 // @Summary      Criar endereço
 // @Tags         addresses
 // @Accept       json
@@ -114,7 +91,6 @@ func (h *AddressHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	address, err := h.svc.Create(r.Context(), ports.CreateAddressInput{
 		UserID:      body.UserID,
-		ContractID:  body.ContractID,
 		ZipCode:     body.ZipCode,
 		AddressLine: body.AddressLine,
 		Number:      body.Number,

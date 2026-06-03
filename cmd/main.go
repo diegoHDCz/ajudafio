@@ -23,6 +23,9 @@ import (
 	address "github.com/diegoHDCz/ajudafio/internal/address"
 	addresshttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	addresspostgres "github.com/diegoHDCz/ajudafio/internal/address/adapters/postgres"
+	appointment "github.com/diegoHDCz/ajudafio/internal/appointment"
+	appointmenthttp "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/http"
+	appointmentpostgres "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
@@ -105,6 +108,11 @@ func main() {
 	contractSvc := contract.NewContractService(contractRepo)
 	contractHandler := contracthttp.NewContractHandler(contractSvc, validator)
 
+	// ── Wire: appointment slice ───────────────────────────────────────────────────────────
+	appointmentRepo := appointmentpostgres.NewRepository(db)
+	appointmentSvc := appointment.NewAppointmentService(appointmentRepo, avalabilityRepo)
+	appointmentHandler := appointmenthttp.NewHandler(appointmentSvc)
+
 	// ── Router ────────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
 
@@ -159,6 +167,7 @@ func main() {
 		r.Mount("/availabilities", availabilityhttp.NewAvailabilityRouter(availabilityHandler))
 		r.Mount("/addresses", addresshttp.NewRouter(addressHandler))
 		r.Mount("/contracts", contracthttp.NewRouter(contractHandler))
+		r.Mount("/appointments", appointmenthttp.NewRouter(appointmentHandler))
 	})
 
 	// ── Server ────────────────────────────────────────────────────────────────

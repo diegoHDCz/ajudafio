@@ -25,15 +25,10 @@ func (s *AddressService) GetByUserID(_ context.Context, userID string) ([]*domai
 	return s.repo.GetAddressesByUserID(userID)
 }
 
-func (s *AddressService) GetByContractID(_ context.Context, contractID string) ([]*domain.Address, error) {
-	return s.repo.GetAddressesByContractID(contractID)
-}
-
 func (s *AddressService) Create(_ context.Context, input ports.CreateAddressInput) (*domain.Address, error) {
 	address := &domain.Address{
 		ID:          uuid.New().String(),
 		UserID:      input.UserID,
-		ContractID:  input.ContractID,
 		ZipCode:     input.ZipCode,
 		AddressLine: input.AddressLine,
 		Number:      input.Number,

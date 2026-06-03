@@ -8,7 +8,6 @@ import (
 
 type createAddressRequest struct {
 	UserID      string  `json:"user_id"`
-	ContractID  *string `json:"contract_id"`
 	ZipCode     string  `json:"zip_code"`
 	AddressLine string  `json:"address_line"`
 	Number      string  `json:"number"`
@@ -33,7 +32,6 @@ type updateAddressRequest struct {
 type addressResponse struct {
 	ID          string  `json:"id"`
 	UserID      string  `json:"user_id"`
-	ContractID  *string `json:"contract_id,omitempty"`
 	ZipCode     string  `json:"zip_code"`
 	AddressLine string  `json:"address_line"`
 	Number      string  `json:"number"`
@@ -50,7 +48,6 @@ func toResponse(a *domain.Address) addressResponse {
 	return addressResponse{
 		ID:          a.ID,
 		UserID:      a.UserID,
-		ContractID:  a.ContractID,
 		ZipCode:     a.ZipCode,
 		AddressLine: a.AddressLine,
 		Number:      a.Number,

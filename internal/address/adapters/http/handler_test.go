@@ -23,12 +23,11 @@ import (
 // --- Mock ---
 
 type mockAddrSvc struct {
-	getByID        func(context.Context, string) (*domain.Address, error)
-	getByUserID    func(context.Context, string) ([]*domain.Address, error)
-	getByContractID func(context.Context, string) ([]*domain.Address, error)
-	create         func(context.Context, ports.CreateAddressInput) (*domain.Address, error)
-	update         func(context.Context, ports.UpdateAddressInput) (*domain.Address, error)
-	deleteFn       func(context.Context, string) error
+	getByID     func(context.Context, string) (*domain.Address, error)
+	getByUserID func(context.Context, string) ([]*domain.Address, error)
+	create      func(context.Context, ports.CreateAddressInput) (*domain.Address, error)
+	update      func(context.Context, ports.UpdateAddressInput) (*domain.Address, error)
+	deleteFn    func(context.Context, string) error
 }
 
 func (m *mockAddrSvc) GetByID(ctx context.Context, id string) (*domain.Address, error) {
@@ -36,9 +35,6 @@ func (m *mockAddrSvc) GetByID(ctx context.Context, id string) (*domain.Address, 
 }
 func (m *mockAddrSvc) GetByUserID(ctx context.Context, userID string) ([]*domain.Address, error) {
 	return m.getByUserID(ctx, userID)
-}
-func (m *mockAddrSvc) GetByContractID(ctx context.Context, contractID string) ([]*domain.Address, error) {
-	return m.getByContractID(ctx, contractID)
 }
 func (m *mockAddrSvc) Create(ctx context.Context, input ports.CreateAddressInput) (*domain.Address, error) {
 	return m.create(ctx, input)
@@ -51,11 +47,9 @@ func (m *mockAddrSvc) Delete(ctx context.Context, id string) error {
 }
 
 func makeTestAddress() *domain.Address {
-	contractID := "contract-1"
 	return &domain.Address{
 		ID:          "addr-1",
 		UserID:      "user-1",
-		ContractID:  &contractID,
 		ZipCode:     "80000-000",
 		AddressLine: "Rua das Flores",
 		Number:      "123",
@@ -191,51 +185,6 @@ func TestAddrGetByUserID_ServiceError(t *testing.T) {
 	}
 	router := newAddrRouter(svc)
 	req := httptest.NewRequest(http.MethodGet, "/user/user-1", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
-}
-
-// --- GetByContractID ---
-
-func TestAddrGetByContractID_Success(t *testing.T) {
-	list := []*domain.Address{makeTestAddress()}
-	svc := &mockAddrSvc{
-		getByContractID: func(_ context.Context, contractID string) ([]*domain.Address, error) {
-			if contractID != "contract-1" {
-				t.Errorf("contractID: got %s, want contract-1", contractID)
-			}
-			return list, nil
-		},
-	}
-	router := newAddrRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/contract/contract-1", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusOK)
-	}
-	var resp []map[string]interface{}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if len(resp) != 1 {
-		t.Errorf("len: got %d, want 1", len(resp))
-	}
-}
-
-func TestAddrGetByContractID_ServiceError(t *testing.T) {
-	svc := &mockAddrSvc{
-		getByContractID: func(_ context.Context, _ string) ([]*domain.Address, error) {
-			return nil, errors.New("db error")
-		},
-	}
-	router := newAddrRouter(svc)
-	req := httptest.NewRequest(http.MethodGet, "/contract/contract-1", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
