@@ -109,19 +109,11 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *repository) FindWithFilters(ctx context.Context, filters ports.ProfessionalFilters) ([]*domain.Professional, error) {
-	dayOfWeek := filters.DayOfWeek
-	if dayOfWeek == nil {
-		dayOfWeek = []string{}
-	}
-	shift := filters.Shift
-	if shift == nil {
-		shift = []string{}
-	}
 	rows, err := r.queries.ListProfessionals(ctx, ListProfessionalsParams{
 		City:      filters.City,
 		State:     filters.State,
-		DayOfWeek: dayOfWeek,
-		Shift:     shift,
+		DayOfWeek: filters.DayOfWeek,
+		Shift:     filters.Shift,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("professionalpostgres.FindWithFilters: %w", err)
