@@ -142,8 +142,8 @@ LEFT JOIN availabilities av ON p.id = av.professional_id
 WHERE
     ($1::text IS NULL OR a.city = $1::text)
     AND ($2::text IS NULL OR a.state = $2::text)
-    AND (cardinality($3::varchar[]) = 0 OR av.day_of_week && $3::varchar[])
-    AND (cardinality($4::varchar[]) = 0 OR av.shift && $4::varchar[])
+    AND ($3::text[] IS NULL OR av.day_of_week = ANY($3::text[]))
+    AND ($4::text[] IS NULL OR av.shift = ANY($4::text[]))
 ORDER BY p.created_at DESC
 `
 

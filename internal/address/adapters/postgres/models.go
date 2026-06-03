@@ -25,12 +25,14 @@ type Address struct {
 }
 
 type Availability struct {
-	ID             pgtype.UUID `json:"id"`
-	ProfessionalID pgtype.UUID `json:"professional_id"`
-	DayOfWeek      []string    `json:"day_of_week"`
-	Shift          []string    `json:"shift"`
-	StartHour      *string     `json:"start_hour"`
-	EndHour        *string     `json:"end_hour"`
+	ID             pgtype.UUID        `json:"id"`
+	ProfessionalID pgtype.UUID        `json:"professional_id"`
+	DayOfWeek      string             `json:"day_of_week"`
+	Shift          string             `json:"shift"`
+	StartHour      *string            `json:"start_hour"`
+	EndHour        *string            `json:"end_hour"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Contract struct {
@@ -42,6 +44,11 @@ type Contract struct {
 	TotalAmount    int32            `json:"total_amount"`
 	Details        []byte           `json:"details"`
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	WeekDays       []string         `json:"week_days"`
+	Shift          *string          `json:"shift"`
+	StartTime      pgtype.Time      `json:"start_time"`
+	HoursPerDay    int32            `json:"hours_per_day"`
+	TotalHours     int32            `json:"total_hours"`
 }
 
 type Professional struct {
