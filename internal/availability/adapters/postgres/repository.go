@@ -34,7 +34,7 @@ func (r *repository) GetByID(ctx context.Context, id string) (*domain.Availabili
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
 		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
-		Shift:          shared.Shift(row.Shift),
+		Shift:          ptrStringToShift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
 	}, nil
@@ -49,7 +49,7 @@ func (r *repository) Create(ctx context.Context, availability *domain.Availabili
 	row, err := r.queries.CreateProfessionalAvailability(ctx, CreateProfessionalAvailabilityParams{
 		ProfessionalID: professionalID,
 		DayOfWeek:      string(availability.DayOfWeek),
-		Shift:          string(availability.Shift),
+		Shift:          shiftToPtr(availability.Shift),
 		StartHour:      availability.StartHour,
 		EndHour:        availability.EndHour,
 	})
@@ -66,6 +66,14 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	return r.queries.DeleteProfessionalAvailability(ctx, availabilityID)
+}
+
+func (r *repository) DeleteByProfessionalID(ctx context.Context, professionalID string) error {
+	id, err := shared.ParseUUID(professionalID)
+	if err != nil {
+		return err
+	}
+	return r.queries.DeleteAvailabilitiesByProfessionalID(ctx, id)
 }
 
 func (r *repository) GetByProfessionalID(ctx context.Context, professionalID string) ([]*domain.Availability, error) {
@@ -99,8 +107,8 @@ func (r *repository) Update(ctx context.Context, availability *domain.Availabili
 		d := string(availability.DayOfWeek)
 		params.DayOfWeek = &d
 	}
-	if availability.Shift != "" {
-		s := string(availability.Shift)
+	if availability.Shift != nil {
+		s := string(*availability.Shift)
 		params.Shift = &s
 	}
 
@@ -116,7 +124,7 @@ func rowToDomain(row CreateProfessionalAvailabilityRow) *domain.Availability {
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
 		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
-		Shift:          shared.Shift(row.Shift),
+		Shift:          ptrStringToShift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
 	}
@@ -127,7 +135,7 @@ func updateRowToDomain(row UpdateProfessionalAvailabilityRow) *domain.Availabili
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
 		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
-		Shift:          shared.Shift(row.Shift),
+		Shift:          ptrStringToShift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
 	}
@@ -138,8 +146,24 @@ func listRowToDomain(row GetProfessionalAvailabilityByProfessionalIDRow) *domain
 		ID:             row.ID.String(),
 		ProfessionalID: row.ProfessionalID.String(),
 		DayOfWeek:      shared.WeekDay(row.DayOfWeek),
-		Shift:          shared.Shift(row.Shift),
+		Shift:          ptrStringToShift(row.Shift),
 		StartHour:      row.StartHour,
 		EndHour:        row.EndHour,
 	}
+}
+
+func ptrStringToShift(s *string) *shared.Shift {
+	if s == nil {
+		return nil
+	}
+	sh := shared.Shift(*s)
+	return &sh
+}
+
+func shiftToPtr(s *shared.Shift) *string {
+	if s == nil {
+		return nil
+	}
+	str := string(*s)
+	return &str
 }

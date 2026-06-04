@@ -16,6 +16,7 @@ type User struct {
 	Email     string  // NOT NULL UNIQUE no banco
 	Phone     *string // Ponteiro pois na tabela não tem NOT NULL
 	Role      Role
+	AvatarURL *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

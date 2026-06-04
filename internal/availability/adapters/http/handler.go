@@ -54,12 +54,12 @@ func (h *AvailabilityHandler) GetByProfessionalID(w http.ResponseWriter, r *http
 	respond(w, http.StatusOK, resp)
 }
 
-// @Summary      Criar disponibilidade
+// @Summary      Criar disponibilidade (replace)
 // @Tags         availabilities
 // @Accept       json
 // @Produce      json
 // @Param        body  body      createAvailabilityRequest  true  "Dados da disponibilidade"
-// @Success      201   {object}  availabilityResponse
+// @Success      201   {array}   availabilityResponse
 // @Failure      400   {string}  string
 // @Failure      422   {string}  string
 // @Security     BearerAuth
@@ -70,23 +70,31 @@ func (h *AvailabilityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if body.ProfessionalID == "" || body.DayOfWeek == "" || body.Shift == "" {
-		http.Error(w, "professional_id, day_of_week and shift are required", http.StatusBadRequest)
+	if body.ProfessionalID == "" || len(body.Availabilities) == 0 {
+		http.Error(w, "professional_id and availabilities are required", http.StatusBadRequest)
 		return
 	}
-	a, err := h.s.Create(r.Context(), &domain.Availability{
-		ID:             uuid.New().String(),
-		ProfessionalID: body.ProfessionalID,
-		DayOfWeek:      body.DayOfWeek,
-		Shift:          body.Shift,
-		StartHour:      body.StartHour,
-		EndHour:        body.EndHour,
-	})
+	rules := make([]*domain.Availability, len(body.Availabilities))
+	for i, rule := range body.Availabilities {
+		rules[i] = &domain.Availability{
+			ID:             uuid.New().String(),
+			ProfessionalID: body.ProfessionalID,
+			DayOfWeek:      rule.DayOfWeek,
+			Shift:          rule.Shift,
+			StartHour:      rule.StartHour,
+			EndHour:        rule.EndHour,
+		}
+	}
+	created, err := h.s.CreateBulk(r.Context(), body.ProfessionalID, rules)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	respond(w, http.StatusCreated, toResponse(a))
+	resp := make([]availabilityResponse, len(created))
+	for i, a := range created {
+		resp[i] = toResponse(a)
+	}
+	respond(w, http.StatusCreated, resp)
 }
 
 // @Summary      Atualizar disponibilidade

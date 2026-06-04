@@ -85,6 +85,9 @@ func (s *stubUserSvcProf) Delete(_ context.Context, _ string) error {
 func (s *stubUserSvcProf) UpdateUserRole(_ context.Context, _ string, _ userdomain.Role) error {
 	return errors.New("not implemented")
 }
+func (s *stubUserSvcProf) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
 
 func newProfRouter(svc ports.ProfessionalService) http.Handler {
 	userSvc := &stubUserSvcProf{}

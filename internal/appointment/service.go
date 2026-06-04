@@ -113,8 +113,20 @@ func (s *AppointmentService) validateAvailability(ctx context.Context, input por
 	)
 }
 
-func coversTime(shift shared.Shift, startHour, endHour *string, start, end time.Time) bool {
-	switch shift {
+func coversTime(shift *shared.Shift, startHour, endHour *string, start, end time.Time) bool {
+	if shift == nil {
+		// pure custom interval — use start/end hours directly
+		if startHour == nil || endHour == nil {
+			return false
+		}
+		avStart, err1 := time.Parse("15:04", *startHour)
+		avEnd, err2 := time.Parse("15:04", *endHour)
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return !start.Before(avStart) && !end.After(avEnd)
+	}
+	switch *shift {
 	case shared.ShiftFullDay:
 		return true
 	case shared.ShiftMorning:

@@ -37,7 +37,7 @@ func (r *repository) GetByID(ctx context.Context, id string) (*domain.User, erro
 		}
 		return nil, fmt.Errorf("userpostgres.GetByID: %w", err)
 	}
-	return toDomain(row), nil
+	return mapUser(row.ID, row.Name, row.Email, row.Phone, row.Role, row.AvatarUrl, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *repository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -48,7 +48,7 @@ func (r *repository) GetByEmail(ctx context.Context, email string) (*domain.User
 		}
 		return nil, fmt.Errorf("userpostgres.GetByEmail: %w", err)
 	}
-	return toDomain(row), nil
+	return mapUser(row.ID, row.Name, row.Email, row.Phone, row.Role, row.AvatarUrl, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
@@ -66,7 +66,7 @@ func (r *repository) Create(ctx context.Context, user *domain.User) (*domain.Use
 	if err != nil {
 		return nil, fmt.Errorf("userpostgres.Create: %w", err)
 	}
-	return toDomain(row), nil
+	return mapUser(row.ID, row.Name, row.Email, row.Phone, row.Role, row.AvatarUrl, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *repository) Update(ctx context.Context, user *domain.User) (*domain.User, error) {
@@ -84,7 +84,7 @@ func (r *repository) Update(ctx context.Context, user *domain.User) (*domain.Use
 	if err != nil {
 		return nil, fmt.Errorf("userpostgres.Update: %w", err)
 	}
-	return toDomain(row), nil
+	return mapUser(row.ID, row.Name, row.Email, row.Phone, row.Role, row.AvatarUrl, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *repository) Delete(ctx context.Context, id string) error {
@@ -96,26 +96,6 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("userpostgres.Delete: %w", err)
 	}
 	return nil
-}
-
-func toDomain(row User) *domain.User {
-	return &domain.User{
-		ID:        uuid.UUID(row.ID.Bytes).String(),
-		Name:      row.Name,
-		Email:     row.Email,
-		Phone:     row.Phone,
-		Role:      domain.Role(row.Role),
-		CreatedAt: row.CreatedAt.Time,
-		UpdatedAt: row.UpdatedAt.Time,
-	}
-}
-
-func parseUUID(s string) (pgtype.UUID, error) {
-	uid, err := uuid.Parse(s)
-	if err != nil {
-		return pgtype.UUID{}, err
-	}
-	return pgtype.UUID{Bytes: uid, Valid: true}, nil
 }
 
 func (r *repository) UpdateUserRole(ctx context.Context, id string, role domain.Role) error {
@@ -130,4 +110,49 @@ func (r *repository) UpdateUserRole(ctx context.Context, id string, role domain.
 		return fmt.Errorf("userpostgres.UpdateUserRole: %w", err)
 	}
 	return nil
+}
+
+func (r *repository) UpdateAvatar(ctx context.Context, id string, avatarURL *string) (*domain.User, error) {
+	uid, err := parseUUID(id)
+	if err != nil {
+		return nil, fmt.Errorf("userpostgres.UpdateAvatar: invalid id: %w", err)
+	}
+	row, err := r.queries.UpdateUserAvatar(ctx, UpdateUserAvatarParams{
+		ID:        uid,
+		AvatarUrl: avatarURL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("userpostgres.UpdateAvatar: %w", err)
+	}
+	return mapUser(row.ID, row.Name, row.Email, row.Phone, row.Role, row.AvatarUrl, row.CreatedAt, row.UpdatedAt), nil
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+func mapUser(
+	id pgtype.UUID,
+	name, email string,
+	phone *string,
+	role string,
+	avatarURL *string,
+	createdAt, updatedAt pgtype.Timestamp,
+) *domain.User {
+	return &domain.User{
+		ID:        uuid.UUID(id.Bytes).String(),
+		Name:      name,
+		Email:     email,
+		Phone:     phone,
+		Role:      domain.Role(role),
+		AvatarURL: avatarURL,
+		CreatedAt: createdAt.Time,
+		UpdatedAt: updatedAt.Time,
+	}
+}
+
+func parseUUID(s string) (pgtype.UUID, error) {
+	uid, err := uuid.Parse(s)
+	if err != nil {
+		return pgtype.UUID{}, err
+	}
+	return pgtype.UUID{Bytes: uid, Valid: true}, nil
 }

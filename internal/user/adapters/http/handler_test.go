@@ -49,6 +49,9 @@ func (m *mockUserSvc) UpdateUserRole(ctx context.Context, id string, role domain
 	}
 	return nil
 }
+func (m *mockUserSvc) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*domain.User, error) {
+	return nil, nil
+}
 
 func makeTestUser() *domain.User {
 	return &domain.User{

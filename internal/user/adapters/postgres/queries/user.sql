@@ -1,11 +1,11 @@
 -- name: GetUserByID :one
-SELECT id, name, email, phone, role, created_at, updated_at
+SELECT id, name, email, phone, role, avatar_url, created_at, updated_at
 FROM users
 WHERE id = @id
 LIMIT 1;
 
 -- name: GetUserByEmail :one
-SELECT id, name, email, phone, role, created_at, updated_at
+SELECT id, name, email, phone, role, avatar_url, created_at, updated_at
 FROM users
 WHERE email = @email
 LIMIT 1;
@@ -24,7 +24,7 @@ INSERT INTO users (
   @phone,
   @role
 )
-RETURNING id, name, email, phone, role, created_at, updated_at;
+RETURNING id, name, email, phone, role, avatar_url, created_at, updated_at;
 
 -- name: UpdateUser :one
 UPDATE users SET
@@ -34,7 +34,7 @@ UPDATE users SET
   role       = COALESCE(@role, role),
   updated_at = NOW()
 WHERE id = @id
-RETURNING id, name, email, phone, role, created_at, updated_at;
+RETURNING id, name, email, phone, role, avatar_url, created_at, updated_at;
 
 -- name: DeleteUser :exec
 DELETE FROM users
@@ -45,3 +45,10 @@ UPDATE users SET
   role       = @role,
   updated_at = NOW()
 WHERE id = @id;
+
+-- name: UpdateUserAvatar :one
+UPDATE users SET
+  avatar_url = @avatar_url,
+  updated_at = NOW()
+WHERE id = @id
+RETURNING id, name, email, phone, role, avatar_url, created_at, updated_at;

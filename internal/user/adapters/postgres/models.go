@@ -11,7 +11,6 @@ import (
 type Address struct {
 	ID          pgtype.UUID      `json:"id"`
 	UserID      pgtype.UUID      `json:"user_id"`
-	ContractID  pgtype.UUID      `json:"contract_id"`
 	ZipCode     string           `json:"zip_code"`
 	AddressLine string           `json:"address_line"`
 	Number      string           `json:"number"`
@@ -24,6 +23,28 @@ type Address struct {
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
+type Appointment struct {
+	ID             pgtype.UUID        `json:"id"`
+	ContractID     pgtype.UUID        `json:"contract_id"`
+	ClientID       pgtype.UUID        `json:"client_id"`
+	ProfessionalID pgtype.UUID        `json:"professional_id"`
+	Date           pgtype.Date        `json:"date"`
+	StartTime      pgtype.Time        `json:"start_time"`
+	EndTime        pgtype.Time        `json:"end_time"`
+	Status         string             `json:"status"`
+	ZipCode        string             `json:"zip_code"`
+	AddressLine    string             `json:"address_line"`
+	Number         string             `json:"number"`
+	Complement     *string            `json:"complement"`
+	District       string             `json:"district"`
+	City           string             `json:"city"`
+	State          string             `json:"state"`
+	Reference      *string            `json:"reference"`
+	Version        int32              `json:"version"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Availability struct {
 	ID             pgtype.UUID        `json:"id"`
 	ProfessionalID pgtype.UUID        `json:"professional_id"`
@@ -33,6 +54,19 @@ type Availability struct {
 	EndHour        *string            `json:"end_hour"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BookingRequest struct {
+	ID              pgtype.UUID        `json:"id"`
+	ClientID        pgtype.UUID        `json:"client_id"`
+	ProfessionalID  pgtype.UUID        `json:"professional_id"`
+	AddressID       pgtype.UUID        `json:"address_id"`
+	ProposedValue   pgtype.Numeric     `json:"proposed_value"`
+	ScheduleDetails []byte             `json:"schedule_details"`
+	Status          string             `json:"status"`
+	RejectionReason *string            `json:"rejection_reason"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	RespondedAt     pgtype.Timestamptz `json:"responded_at"`
 }
 
 type Contract struct {
@@ -83,4 +117,5 @@ type User struct {
 	Role      string           `json:"role"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	AvatarUrl *string          `json:"avatar_url"`
 }

@@ -20,7 +20,7 @@ RETURNING id, professional_id, day_of_week, shift, start_hour, end_hour
 type CreateProfessionalAvailabilityParams struct {
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -29,7 +29,7 @@ type CreateProfessionalAvailabilityRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -52,6 +52,15 @@ func (q *Queries) CreateProfessionalAvailability(ctx context.Context, arg Create
 		&i.EndHour,
 	)
 	return i, err
+}
+
+const deleteAvailabilitiesByProfessionalID = `-- name: DeleteAvailabilitiesByProfessionalID :exec
+DELETE FROM availabilities WHERE professional_id = $1
+`
+
+func (q *Queries) DeleteAvailabilitiesByProfessionalID(ctx context.Context, professionalID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAvailabilitiesByProfessionalID, professionalID)
+	return err
 }
 
 const deleteProfessionalAvailability = `-- name: DeleteProfessionalAvailability :exec
@@ -87,7 +96,7 @@ type GetAllProfessionalAvailabilitiesRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -129,7 +138,7 @@ type GetAvailabilityByIDRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -158,7 +167,7 @@ type GetProfessionalAvailabilityByProfessionalIDRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }
@@ -213,7 +222,7 @@ type UpdateProfessionalAvailabilityRow struct {
 	ID             pgtype.UUID `json:"id"`
 	ProfessionalID pgtype.UUID `json:"professional_id"`
 	DayOfWeek      string      `json:"day_of_week"`
-	Shift          string      `json:"shift"`
+	Shift          *string     `json:"shift"`
 	StartHour      *string     `json:"start_hour"`
 	EndHour        *string     `json:"end_hour"`
 }

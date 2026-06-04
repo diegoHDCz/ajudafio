@@ -42,6 +42,7 @@ import (
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
+	s3provider "github.com/diegoHDCz/ajudafio/internal/storage/s3"
 )
 
 // @title			Ajudafio API
@@ -77,7 +78,8 @@ func main() {
 
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
-	userSvc := user.NewService(userRepo)
+	storage := s3provider.New(cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, cfg.AWSRegion, cfg.AWSS3BucketName)
+	userSvc := user.NewService(userRepo, storage)
 
 	// ── Wire: shared validator ─────────────────────────────────────────────────
 	validator := shared.NewValidator(userSvc)

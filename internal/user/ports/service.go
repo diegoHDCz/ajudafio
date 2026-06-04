@@ -13,6 +13,7 @@ type UserService interface {
 	Update(ctx context.Context, input UpdateUserInput) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
 	UpdateUserRole(ctx context.Context, id string, role domain.Role) error
+	UploadAvatar(ctx context.Context, userID string, fileData []byte, contentType string) (*domain.User, error)
 }
 
 type CreateUserInput struct {

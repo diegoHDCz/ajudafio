@@ -23,8 +23,11 @@ WHERE
 
 -- name: CreateProfessionalAvailability :one
 INSERT INTO availabilities (professional_id, day_of_week, shift, start_hour, end_hour)
-VALUES (@professional_id, @day_of_week, @shift, @start_hour, @end_hour)
+VALUES (@professional_id, @day_of_week, sqlc.narg('shift'), @start_hour, @end_hour)
 RETURNING id, professional_id, day_of_week, shift, start_hour, end_hour;
+
+-- name: DeleteAvailabilitiesByProfessionalID :exec
+DELETE FROM availabilities WHERE professional_id = @professional_id;
 
 -- name: UpdateProfessionalAvailability :one
 UPDATE availabilities SET

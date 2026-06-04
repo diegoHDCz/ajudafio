@@ -10,11 +10,12 @@ import (
 )
 
 type mockAvailRepo struct {
-	getByID             func(context.Context, string) (*domain.Availability, error)
-	getByProfessionalID func(context.Context, string) ([]*domain.Availability, error)
-	create              func(context.Context, *domain.Availability) (*domain.Availability, error)
-	update              func(context.Context, *domain.Availability) (*domain.Availability, error)
-	delete              func(context.Context, string) error
+	getByID                func(context.Context, string) (*domain.Availability, error)
+	getByProfessionalID    func(context.Context, string) ([]*domain.Availability, error)
+	create                 func(context.Context, *domain.Availability) (*domain.Availability, error)
+	update                 func(context.Context, *domain.Availability) (*domain.Availability, error)
+	delete                 func(context.Context, string) error
+	deleteByProfessionalID func(context.Context, string) error
 }
 
 func (m *mockAvailRepo) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
@@ -35,13 +36,21 @@ func (m *mockAvailRepo) Update(ctx context.Context, a *domain.Availability) (*do
 func (m *mockAvailRepo) Delete(ctx context.Context, id string) error {
 	return m.delete(ctx, id)
 }
+func (m *mockAvailRepo) DeleteByProfessionalID(ctx context.Context, id string) error {
+	if m.deleteByProfessionalID != nil {
+		return m.deleteByProfessionalID(ctx, id)
+	}
+	return nil
+}
+
+func ptrShift(s shared.Shift) *shared.Shift { return &s }
 
 func makeAvailability() *domain.Availability {
 	return &domain.Availability{
 		ID:             "avail-1",
 		ProfessionalID: "prof-1",
 		DayOfWeek:      shared.Monday,
-		Shift:          shared.ShiftMorning,
+		Shift:          ptrShift(shared.ShiftMorning),
 	}
 }
 
@@ -112,8 +121,8 @@ func TestAvailabilityCreate_Success(t *testing.T) {
 			if a.DayOfWeek != input.DayOfWeek {
 				t.Errorf("DayOfWeek: got %s, want %s", a.DayOfWeek, input.DayOfWeek)
 			}
-			if a.Shift != input.Shift {
-				t.Errorf("Shift: got %s, want %s", a.Shift, input.Shift)
+			if a.Shift == nil || input.Shift == nil || *a.Shift != *input.Shift {
+				t.Errorf("Shift: got %v, want %v", a.Shift, input.Shift)
 			}
 			return want, nil
 		},
@@ -139,6 +148,101 @@ func TestAvailabilityCreate_Error(t *testing.T) {
 	_, err := svc.Create(context.Background(), makeAvailability())
 	if !errors.Is(err, repoErr) {
 		t.Errorf("expected repoErr, got: %v", err)
+	}
+}
+
+// --- CreateBulk ---
+
+func TestAvailabilityCreateBulk_Success(t *testing.T) {
+	deleteCount := 0
+	createCount := 0
+	svc := NewAvailabilityService(&mockAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error {
+			deleteCount++
+			return nil
+		},
+		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
+			createCount++
+			return a, nil
+		},
+	})
+
+	rules := []*domain.Availability{
+		{ID: "1", ProfessionalID: "prof-1", DayOfWeek: shared.Monday, Shift: ptrShift(shared.ShiftMorning)},
+		{ID: "2", ProfessionalID: "prof-1", DayOfWeek: shared.Tuesday, Shift: ptrShift(shared.ShiftAfternoon)},
+	}
+	got, err := svc.CreateBulk(context.Background(), "prof-1", rules)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if deleteCount != 1 {
+		t.Errorf("deleteByProfessionalID called %d times, want 1", deleteCount)
+	}
+	if createCount != 2 {
+		t.Errorf("create called %d times, want 2", createCount)
+	}
+	if len(got) != 2 {
+		t.Errorf("returned %d items, want 2", len(got))
+	}
+}
+
+func TestAvailabilityCreateBulk_ShiftResolution(t *testing.T) {
+	svc := NewAvailabilityService(&mockAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error { return nil },
+		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
+			if a.StartHour == nil || *a.StartHour != "09:00" {
+				t.Errorf("StartHour: got %v, want 09:00", a.StartHour)
+			}
+			if a.EndHour == nil || *a.EndHour != "12:00" {
+				t.Errorf("EndHour: got %v, want 12:00", a.EndHour)
+			}
+			return a, nil
+		},
+	})
+
+	rules := []*domain.Availability{
+		{ID: "1", ProfessionalID: "prof-1", DayOfWeek: shared.Monday, Shift: ptrShift(shared.ShiftMorning)},
+	}
+	if _, err := svc.CreateBulk(context.Background(), "prof-1", rules); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAvailabilityCreateBulk_CustomRequiresHours(t *testing.T) {
+	svc := NewAvailabilityService(&mockAvailRepo{})
+	rules := []*domain.Availability{
+		{ID: "1", ProfessionalID: "prof-1", DayOfWeek: shared.Monday},
+	}
+	if _, err := svc.CreateBulk(context.Background(), "prof-1", rules); err == nil {
+		t.Error("expected error for custom rule without hours")
+	}
+}
+
+func TestAvailabilityCreateBulk_OverlapRejected(t *testing.T) {
+	start1, end1 := "10:00", "14:00"
+	start2, end2 := "12:00", "16:00"
+	svc := NewAvailabilityService(&mockAvailRepo{})
+	rules := []*domain.Availability{
+		{ID: "1", ProfessionalID: "prof-1", DayOfWeek: shared.Wednesday, StartHour: &start1, EndHour: &end1},
+		{ID: "2", ProfessionalID: "prof-1", DayOfWeek: shared.Wednesday, StartHour: &start2, EndHour: &end2},
+	}
+	if _, err := svc.CreateBulk(context.Background(), "prof-1", rules); err == nil {
+		t.Error("expected overlap error")
+	}
+}
+
+func TestAvailabilityCreateBulk_NoOverlapDifferentDays(t *testing.T) {
+	start, end := "10:00", "14:00"
+	svc := NewAvailabilityService(&mockAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error { return nil },
+		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) { return a, nil },
+	})
+	rules := []*domain.Availability{
+		{ID: "1", ProfessionalID: "prof-1", DayOfWeek: shared.Monday, StartHour: &start, EndHour: &end},
+		{ID: "2", ProfessionalID: "prof-1", DayOfWeek: shared.Tuesday, StartHour: &start, EndHour: &end},
+	}
+	if _, err := svc.CreateBulk(context.Background(), "prof-1", rules); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 

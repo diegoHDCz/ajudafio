@@ -29,6 +29,7 @@ type userResponse struct {
 	Name      string      `json:"name"`
 	Phone     *string     `json:"phone"`
 	Role      domain.Role `json:"role"`
+	AvatarURL *string     `json:"avatar_url,omitempty"`
 	CreatedAt string      `json:"created_at"`
 }
 
@@ -39,6 +40,7 @@ func toResponse(u *domain.User) userResponse {
 		Name:      u.Name,
 		Phone:     u.Phone,
 		Role:      u.Role,
+		AvatarURL: u.AvatarURL,
 		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }

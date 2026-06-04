@@ -24,11 +24,12 @@ import (
 // --- Stub repository ---
 
 type stubAvailRepo struct {
-	getByID             func(context.Context, string) (*domain.Availability, error)
-	getByProfessionalID func(context.Context, string) ([]*domain.Availability, error)
-	create              func(context.Context, *domain.Availability) (*domain.Availability, error)
-	update              func(context.Context, *domain.Availability) (*domain.Availability, error)
-	delete              func(context.Context, string) error
+	getByID                func(context.Context, string) (*domain.Availability, error)
+	getByProfessionalID    func(context.Context, string) ([]*domain.Availability, error)
+	create                 func(context.Context, *domain.Availability) (*domain.Availability, error)
+	update                 func(context.Context, *domain.Availability) (*domain.Availability, error)
+	delete                 func(context.Context, string) error
+	deleteByProfessionalID func(context.Context, string) error
 }
 
 func (r *stubAvailRepo) GetByID(ctx context.Context, id string) (*domain.Availability, error) {
@@ -48,6 +49,12 @@ func (r *stubAvailRepo) Update(ctx context.Context, a *domain.Availability) (*do
 }
 func (r *stubAvailRepo) Delete(ctx context.Context, id string) error {
 	return r.delete(ctx, id)
+}
+func (r *stubAvailRepo) DeleteByProfessionalID(ctx context.Context, id string) error {
+	if r.deleteByProfessionalID != nil {
+		return r.deleteByProfessionalID(ctx, id)
+	}
+	return nil
 }
 
 // --- Stub professional service ---
@@ -103,13 +110,18 @@ func (s *stubUserSvcAvail) Delete(_ context.Context, _ string) error {
 func (s *stubUserSvcAvail) UpdateUserRole(_ context.Context, _ string, _ userdomain.Role) error {
 	return errors.New("not implemented")
 }
+func (s *stubUserSvcAvail) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func ptrShift(s shared.Shift) *shared.Shift { return &s }
 
 func makeTestAvailability() *domain.Availability {
 	return &domain.Availability{
 		ID:             "avail-1",
 		ProfessionalID: "prof-1",
 		DayOfWeek:      shared.Monday,
-		Shift:          shared.ShiftMorning,
+		Shift:          ptrShift(shared.ShiftMorning),
 	}
 }
 
@@ -206,6 +218,7 @@ func TestAvailHandlerCreate_Success(t *testing.T) {
 	created := makeTestAvailability()
 	created.ID = "new-avail-id"
 	repo := &stubAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error { return nil },
 		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
 			if a.ProfessionalID != "prof-1" {
 				t.Errorf("ProfessionalID: got %s, want prof-1", a.ProfessionalID)
@@ -218,8 +231,9 @@ func TestAvailHandlerCreate_Success(t *testing.T) {
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     "MONDAY",
-		"shift":           "MORNING",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "MONDAY", "shift": "MORNING"},
+		},
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -228,31 +242,35 @@ func TestAvailHandlerCreate_Success(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusCreated {
-		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusCreated)
+		t.Fatalf("status: got %d, want %d — body: %s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
-	var resp map[string]interface{}
+	var resp []map[string]interface{}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp["id"] != created.ID {
-		t.Errorf("id: got %v, want %s", resp["id"], created.ID)
+	if len(resp) != 1 {
+		t.Errorf("len: got %d, want 1", len(resp))
 	}
 }
 
-func TestAvailHandlerCreate_WithShift(t *testing.T) {
-	created := makeTestAvailability()
+func TestAvailHandlerCreate_ShiftResolvesToHours(t *testing.T) {
 	repo := &stubAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error { return nil },
 		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
-			if a.Shift == "" {
-				t.Error("expected shift to be set")
+			if a.StartHour == nil || *a.StartHour != "09:00" {
+				t.Errorf("StartHour: got %v, want 09:00", a.StartHour)
 			}
-			return created, nil
+			if a.EndHour == nil || *a.EndHour != "12:00" {
+				t.Errorf("EndHour: got %v, want 12:00", a.EndHour)
+			}
+			return a, nil
 		},
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     "MONDAY",
-		"shift":           "MORNING",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "MONDAY", "shift": "MORNING"},
+		},
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -262,6 +280,58 @@ func TestAvailHandlerCreate_WithShift(t *testing.T) {
 
 	if rec.Code != http.StatusCreated {
 		t.Errorf("status: got %d, want %d", rec.Code, http.StatusCreated)
+	}
+}
+
+func TestAvailHandlerCreate_MultipleIntervalsPerDay(t *testing.T) {
+	createCount := 0
+	start1, end1 := "10:00", "12:00"
+	start2, end2 := "16:00", "20:00"
+	repo := &stubAvailRepo{
+		deleteByProfessionalID: func(_ context.Context, _ string) error { return nil },
+		create: func(_ context.Context, a *domain.Availability) (*domain.Availability, error) {
+			createCount++
+			return a, nil
+		},
+	}
+	body, _ := json.Marshal(map[string]interface{}{
+		"professional_id": "prof-1",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "WEDNESDAY", "start_hour": start1, "end_hour": end1},
+			{"day_of_week": "WEDNESDAY", "start_hour": start2, "end_hour": end2},
+		},
+	})
+	router := newAvailRouter(repo)
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d — %s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if createCount != 2 {
+		t.Errorf("create called %d times, want 2", createCount)
+	}
+}
+
+func TestAvailHandlerCreate_OverlapRejected(t *testing.T) {
+	repo := &stubAvailRepo{}
+	body, _ := json.Marshal(map[string]interface{}{
+		"professional_id": "prof-1",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "WEDNESDAY", "start_hour": "10:00", "end_hour": "14:00"},
+			{"day_of_week": "WEDNESDAY", "start_hour": "12:00", "end_hour": "16:00"},
+		},
+	})
+	router := newAvailRouter(repo)
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnprocessableEntity)
 	}
 }
 
@@ -279,22 +349,10 @@ func TestAvailHandlerCreate_InvalidJSON(t *testing.T) {
 
 func TestAvailHandlerCreate_MissingProfessionalID(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
-	body, _ := json.Marshal(map[string]interface{}{"day_of_week": "MONDAY", "shift": "MORNING"})
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusBadRequest)
-	}
-}
-
-func TestAvailHandlerCreate_MissingDayOfWeek(t *testing.T) {
-	router := newAvailRouter(&stubAvailRepo{})
 	body, _ := json.Marshal(map[string]interface{}{
-		"professional_id": "prof-1",
-		"shift":           "MORNING",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "MONDAY", "shift": "MORNING"},
+		},
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -306,11 +364,11 @@ func TestAvailHandlerCreate_MissingDayOfWeek(t *testing.T) {
 	}
 }
 
-func TestAvailHandlerCreate_MissingShift(t *testing.T) {
+func TestAvailHandlerCreate_EmptyAvailabilities(t *testing.T) {
 	router := newAvailRouter(&stubAvailRepo{})
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     "MONDAY",
+		"availabilities":  []interface{}{},
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -319,19 +377,38 @@ func TestAvailHandlerCreate_MissingShift(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status: got %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestAvailHandlerCreate_CustomMissingHours(t *testing.T) {
+	router := newAvailRouter(&stubAvailRepo{})
+	body, _ := json.Marshal(map[string]interface{}{
+		"professional_id": "prof-1",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "MONDAY"},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnprocessableEntity)
 	}
 }
 
 func TestAvailHandlerCreate_ServiceError(t *testing.T) {
 	repo := &stubAvailRepo{
-		create: func(_ context.Context, _ *domain.Availability) (*domain.Availability, error) {
-			return nil, errors.New("create failed")
+		deleteByProfessionalID: func(_ context.Context, _ string) error {
+			return errors.New("delete failed")
 		},
 	}
 	body, _ := json.Marshal(map[string]interface{}{
 		"professional_id": "prof-1",
-		"day_of_week":     "MONDAY",
-		"shift":           "MORNING",
+		"availabilities": []map[string]interface{}{
+			{"day_of_week": "MONDAY", "shift": "MORNING"},
+		},
 	})
 	router := newAvailRouter(repo)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))

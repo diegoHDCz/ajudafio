@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
@@ -27,6 +28,7 @@ func NewRouter(h *Handler) http.Handler {
 	r.Get("/me", h.Me)
 	r.Get("/{id}", h.GetByID)
 	r.Patch("/{id}", h.Update)
+	r.Patch("/{id}/avatar", h.UploadAvatar)
 	r.Delete("/{id}", h.Delete)
 	return r
 }
@@ -191,6 +193,62 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// @Summary      Upload avatar do usuário
+// @Tags         users
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        id      path      string  true  "User ID"
+// @Param        avatar  formData  file    true  "Imagem de avatar"
+// @Success      200  {object}  userResponse
+// @Failure      400  {string}  string
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Failure      500  {string}  string
+// @Security     BearerAuth
+// @Router       /users/{id}/avatar [patch]
+func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	claims := authmiddleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "file too large or invalid", http.StatusBadRequest)
+		return
+	}
+
+	file, _, err := r.FormFile("avatar")
+	if err != nil {
+		http.Error(w, "avatar file is required", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "failed to read file", http.StatusInternalServerError)
+		return
+	}
+
+	contentType := http.DetectContentType(data)
+
+	user, err := h.svc.UploadAvatar(r.Context(), id, data, contentType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respond(w, http.StatusOK, toResponse(user))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
