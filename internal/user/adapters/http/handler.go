@@ -217,11 +217,6 @@ func (h *Handler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
-
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "file too large or invalid", http.StatusBadRequest)
 		return

@@ -27,22 +27,22 @@ import (
 	appointmenthttp "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/http"
 	appointmentpostgres "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
-	bookingrequest "github.com/diegoHDCz/ajudafio/internal/bookingrequest"
-	bookingrequesthttp "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/http"
-	bookingrequestpostgres "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/postgres"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
+	bookingrequest "github.com/diegoHDCz/ajudafio/internal/bookingrequest"
+	bookingrequesthttp "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/http"
+	bookingrequestpostgres "github.com/diegoHDCz/ajudafio/internal/bookingrequest/adapters/postgres"
 	contract "github.com/diegoHDCz/ajudafio/internal/contract"
 	contracthttp "github.com/diegoHDCz/ajudafio/internal/contract/adapters/http"
 	contractpostgres "github.com/diegoHDCz/ajudafio/internal/contract/adapters/postgres"
 	professional "github.com/diegoHDCz/ajudafio/internal/professional"
 	professionalhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
 	professionalpostgres "github.com/diegoHDCz/ajudafio/internal/professional/adapters/postgres"
+	s3provider "github.com/diegoHDCz/ajudafio/internal/storage/s3"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
-	s3provider "github.com/diegoHDCz/ajudafio/internal/storage/s3"
 )
 
 // @title			Ajudafio API
@@ -169,6 +169,7 @@ func main() {
 			r.Get("/{id}", userHandler.GetByID)
 			r.Patch("/{id}", userHandler.Update)
 			r.Delete("/{id}", userHandler.Delete)
+			r.Patch("/{id}/avatar", userHandler.UploadAvatar)
 		})
 	})
 
