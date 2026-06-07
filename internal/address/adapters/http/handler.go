@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/address/ports"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
 )

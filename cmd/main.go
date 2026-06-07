@@ -95,7 +95,7 @@ func main() {
 
 	// ── Wire: professional slice ────────────────────────────────────────────────────────────────
 	professionalRepo := professionalpostgres.NewRepository(db)
-	professionalSvc := professional.NewProfessionalService(professionalRepo)
+	professionalSvc := professional.NewProfessionalService(professionalRepo, storage)
 	professionalHandler := professionalhttp.NewProfessionalHandler(professionalSvc, userSvc, validator)
 
 	// ── Wire: avaliabilities slice ────────────────────────────────────────────────────────────────
@@ -170,6 +170,7 @@ func main() {
 			r.Patch("/{id}", userHandler.Update)
 			r.Delete("/{id}", userHandler.Delete)
 			r.Patch("/{id}/avatar", userHandler.UploadAvatar)
+			r.Get("/{userID}/addresses", addressHandler.GetByUserID)
 		})
 	})
 

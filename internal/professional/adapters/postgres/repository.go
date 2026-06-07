@@ -108,21 +108,50 @@ func (r *repository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *repository) FindWithFilters(ctx context.Context, filters ports.ProfessionalFilters) ([]*domain.Professional, error) {
+func (r *repository) FindWithFilters(ctx context.Context, filters ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
 	rows, err := r.queries.ListProfessionals(ctx, ListProfessionalsParams{
+		City:      filters.City,
+		State:     filters.State,
+		DayOfWeek: filters.DayOfWeek,
+		Shift:     filters.Shift,
+		LimitVal:  int32(filters.PageSize),
+		OffsetVal: int32((filters.Page - 1) * filters.PageSize),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("professionalpostgres.FindWithFilters: %w", err)
+	}
+
+	total, err := r.queries.CountProfessionals(ctx, CountProfessionalsParams{
 		City:      filters.City,
 		State:     filters.State,
 		DayOfWeek: filters.DayOfWeek,
 		Shift:     filters.Shift,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("professionalpostgres.FindWithFilters: %w", err)
+		return nil, 0, fmt.Errorf("professionalpostgres.FindWithFilters: %w", err)
 	}
+
 	result := make([]*domain.Professional, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, toDomain(row))
+		p := toDomain(Professional{
+			ID:                row.ID,
+			UserID:            row.UserID,
+			LicenseNumber:     row.LicenseNumber,
+			Category:          row.Category,
+			YearsOfExperience: row.YearsOfExperience,
+			Verified:          row.Verified,
+			Resume:            row.Resume,
+			Metadata:          row.Metadata,
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		})
+		p.UserName = row.UserName
+		p.UserAvatarURL = row.UserAvatarUrl
+		p.UserEmail = row.UserEmail
+		p.UserRole = row.UserRole
+		result = append(result, p)
 	}
-	return result, nil
+	return result, total, nil
 }
 
 func toDomain(row Professional) *domain.Professional {

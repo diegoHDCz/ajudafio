@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const avatarSignedURLExpiration = 15 * time.Minute
+
 type service struct {
 	repo    ports.UserRepository
 	storage storagePorts.StorageProvider
@@ -27,6 +29,17 @@ func (s *service) GetByID(ctx context.Context, id string) (*domain.User, error) 
 	if err != nil {
 		return nil, fmt.Errorf("user.GetByID: %w", err)
 	}
+
+	if user.AvatarURL != nil && s.storage != nil {
+		if key := extractS3Key(*user.AvatarURL); key != "" {
+			signedURL, err := s.storage.GetSignedURL(ctx, key, avatarSignedURLExpiration)
+			if err != nil {
+				return nil, fmt.Errorf("user.GetByID: %w", err)
+			}
+			user.AvatarURL = &signedURL
+		}
+	}
+
 	return user, nil
 }
 

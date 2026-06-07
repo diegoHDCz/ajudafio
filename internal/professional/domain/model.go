@@ -44,6 +44,10 @@ type Professional struct {
 	Metadata          []byte
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	UserName          *string
+	UserAvatarURL     *string
+	UserEmail         *string
+	UserRole          *string
 }
 
 func NewProfessional(id, userID, licenseNumber string, category Category, yearsOfExperience int, resume string, metadata []byte) (*Professional, error) {

@@ -27,7 +27,7 @@ type mockProfSvc struct {
 	create          func(context.Context, ports.CreateProfessionalInput) (*domain.Professional, error)
 	update          func(context.Context, ports.UpdateProfessionalInput) (*domain.Professional, error)
 	deleteFn        func(context.Context, string) error
-	findWithFilters func(context.Context, ports.ProfessionalFilters) ([]*domain.Professional, error)
+	findWithFilters func(context.Context, ports.ProfessionalFilters) (*ports.ProfessionalPage, error)
 }
 
 func (m *mockProfSvc) GetByID(ctx context.Context, id string) (*domain.Professional, error) {
@@ -45,7 +45,7 @@ func (m *mockProfSvc) Update(ctx context.Context, input ports.UpdateProfessional
 func (m *mockProfSvc) Delete(ctx context.Context, id string) error {
 	return m.deleteFn(ctx, id)
 }
-func (m *mockProfSvc) FindWithFilters(ctx context.Context, filters ports.ProfessionalFilters) ([]*domain.Professional, error) {
+func (m *mockProfSvc) FindWithFilters(ctx context.Context, filters ports.ProfessionalFilters) (*ports.ProfessionalPage, error) {
 	return m.findWithFilters(ctx, filters)
 }
 
@@ -105,11 +105,11 @@ func newProfRouterWithValidator(svc ports.ProfessionalService, userSvc userports
 func TestProfFindWithFilters_NoFilters(t *testing.T) {
 	list := []*domain.Professional{makeTestProfessional()}
 	svc := &mockProfSvc{
-		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, error) {
+		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) (*ports.ProfessionalPage, error) {
 			if f.City != nil || f.State != nil || len(f.DayOfWeek) != 0 || len(f.Shift) != 0 {
 				t.Errorf("expected empty filters, got %+v", f)
 			}
-			return list, nil
+			return &ports.ProfessionalPage{Items: list, Total: int64(len(list)), Page: 1, PageSize: 20, TotalPages: 1}, nil
 		},
 	}
 	router := newProfRouter(svc)
@@ -120,18 +120,21 @@ func TestProfFindWithFilters_NoFilters(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusOK)
 	}
-	var resp []map[string]interface{}
+	var resp struct {
+		Items []map[string]interface{} `json:"items"`
+		Total int64                    `json:"total"`
+	}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if len(resp) != 1 {
-		t.Errorf("len: got %d, want 1", len(resp))
+	if len(resp.Items) != 1 {
+		t.Errorf("len: got %d, want 1", len(resp.Items))
 	}
 }
 
 func TestProfFindWithFilters_WithFilters(t *testing.T) {
 	svc := &mockProfSvc{
-		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, error) {
+		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) (*ports.ProfessionalPage, error) {
 			if f.City == nil || *f.City != "curitiba" {
 				t.Errorf("City: got %v, want curitiba", f.City)
 			}
@@ -144,7 +147,8 @@ func TestProfFindWithFilters_WithFilters(t *testing.T) {
 			if len(f.Shift) != 1 || f.Shift[0] != "MORNING" {
 				t.Errorf("Shift: got %v, want [MORNING]", f.Shift)
 			}
-			return []*domain.Professional{makeTestProfessional()}, nil
+			list := []*domain.Professional{makeTestProfessional()}
+			return &ports.ProfessionalPage{Items: list, Total: int64(len(list)), Page: 1, PageSize: 20, TotalPages: 1}, nil
 		},
 	}
 	router := newProfRouter(svc)
@@ -156,18 +160,21 @@ func TestProfFindWithFilters_WithFilters(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusOK)
 	}
-	var resp []map[string]interface{}
+	var resp struct {
+		Items []map[string]interface{} `json:"items"`
+		Total int64                    `json:"total"`
+	}
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if len(resp) != 1 {
-		t.Errorf("len: got %d, want 1", len(resp))
+	if len(resp.Items) != 1 {
+		t.Errorf("len: got %d, want 1", len(resp.Items))
 	}
 }
 
 func TestProfFindWithFilters_ServiceError(t *testing.T) {
 	svc := &mockProfSvc{
-		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) ([]*domain.Professional, error) {
+		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) (*ports.ProfessionalPage, error) {
 			return nil, errors.New("db error")
 		},
 	}

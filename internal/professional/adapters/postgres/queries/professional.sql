@@ -45,7 +45,7 @@ DELETE FROM professionals
 WHERE id = @id;
 
 -- name: ListProfessionals :many
-SELECT DISTINCT
+SELECT
     p.id,
     p.user_id,
     p.license_number,
@@ -55,13 +55,42 @@ SELECT DISTINCT
     p.resume,
     p.metadata,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    u.name AS user_name,
+    u.avatar_url AS user_avatar_url,
+    u.email AS user_email,
+    u.role AS user_role
 FROM professionals p
-LEFT JOIN addresses a ON p.user_id = a.user_id
-LEFT JOIN availabilities av ON p.id = av.professional_id
+LEFT JOIN users u ON p.user_id = u.id
 WHERE
-    (sqlc.narg('city')::text IS NULL OR a.city = sqlc.narg('city')::text)
-    AND (sqlc.narg('state')::text IS NULL OR a.state = sqlc.narg('state')::text)
-    AND (sqlc.narg('day_of_week')::text[] IS NULL OR av.day_of_week = ANY(sqlc.narg('day_of_week')::text[]))
-    AND (sqlc.narg('shift')::text[] IS NULL OR av.shift = ANY(sqlc.narg('shift')::text[]))
-ORDER BY p.created_at DESC;
+    (sqlc.narg('city')::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.city = sqlc.narg('city')::text
+    ))
+    AND (sqlc.narg('state')::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.state = sqlc.narg('state')::text
+    ))
+    AND (sqlc.narg('day_of_week')::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.day_of_week = ANY(sqlc.narg('day_of_week')::text[])
+    ))
+    AND (sqlc.narg('shift')::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.shift = ANY(sqlc.narg('shift')::text[])
+    ))
+ORDER BY p.created_at DESC
+LIMIT @limit_val OFFSET @offset_val;
+
+-- name: CountProfessionals :one
+SELECT COUNT(*)
+FROM professionals p
+WHERE
+    (sqlc.narg('city')::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.city = sqlc.narg('city')::text
+    ))
+    AND (sqlc.narg('state')::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.state = sqlc.narg('state')::text
+    ))
+    AND (sqlc.narg('day_of_week')::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.day_of_week = ANY(sqlc.narg('day_of_week')::text[])
+    ))
+    AND (sqlc.narg('shift')::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.shift = ANY(sqlc.narg('shift')::text[])
+    ));

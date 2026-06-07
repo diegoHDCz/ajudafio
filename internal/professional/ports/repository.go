@@ -12,5 +12,5 @@ type ProfessionalRepository interface {
 	Create(ctx context.Context, professional *domain.Professional) (*domain.Professional, error)
 	Update(ctx context.Context, professional *domain.Professional) (*domain.Professional, error)
 	Delete(ctx context.Context, id string) error
-	FindWithFilters(ctx context.Context, filters ProfessionalFilters) ([]*domain.Professional, error)
+	FindWithFilters(ctx context.Context, filters ProfessionalFilters) ([]*domain.Professional, int64, error)
 }

@@ -12,7 +12,7 @@ type ProfessionalService interface {
 	Create(ctx context.Context, input CreateProfessionalInput) (*domain.Professional, error)
 	Update(ctx context.Context, input UpdateProfessionalInput) (*domain.Professional, error)
 	Delete(ctx context.Context, id string) error
-	FindWithFilters(ctx context.Context, filters ProfessionalFilters) ([]*domain.Professional, error)
+	FindWithFilters(ctx context.Context, filters ProfessionalFilters) (*ProfessionalPage, error)
 }
 
 type CreateProfessionalInput struct {
@@ -39,4 +39,14 @@ type ProfessionalFilters struct {
 	State     *string
 	DayOfWeek []string
 	Shift     []string
+	Page      int
+	PageSize  int
+}
+
+type ProfessionalPage struct {
+	Items      []*domain.Professional
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
 }

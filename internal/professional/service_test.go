@@ -16,7 +16,7 @@ type mockProfessionalRepo struct {
 	create          func(context.Context, *domain.Professional) (*domain.Professional, error)
 	update          func(context.Context, *domain.Professional) (*domain.Professional, error)
 	delete          func(context.Context, string) error
-	findWithFilters func(context.Context, ports.ProfessionalFilters) ([]*domain.Professional, error)
+	findWithFilters func(context.Context, ports.ProfessionalFilters) ([]*domain.Professional, int64, error)
 }
 
 func (m *mockProfessionalRepo) GetByID(ctx context.Context, id string) (*domain.Professional, error) {
@@ -34,7 +34,7 @@ func (m *mockProfessionalRepo) Update(ctx context.Context, p *domain.Professiona
 func (m *mockProfessionalRepo) Delete(ctx context.Context, id string) error {
 	return m.delete(ctx, id)
 }
-func (m *mockProfessionalRepo) FindWithFilters(ctx context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, error) {
+func (m *mockProfessionalRepo) FindWithFilters(ctx context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
 	return m.findWithFilters(ctx, f)
 }
 
@@ -62,7 +62,7 @@ func TestProfessionalGetByID_Success(t *testing.T) {
 			}
 			return want, nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.GetByID(context.Background(), want.ID)
 	if err != nil {
@@ -77,7 +77,7 @@ func TestProfessionalGetByID_RepoError(t *testing.T) {
 	repoErr := errors.New("not found")
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return nil, repoErr },
-	})
+	}, nil)
 
 	_, err := svc.GetByID(context.Background(), "prof-1")
 	if !errors.Is(err, repoErr) {
@@ -96,7 +96,7 @@ func TestProfessionalGetByUserID_Success(t *testing.T) {
 			}
 			return want, nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.GetByUserID(context.Background(), want.UserID)
 	if err != nil {
@@ -111,7 +111,7 @@ func TestProfessionalGetByUserID_RepoError(t *testing.T) {
 	repoErr := errors.New("not found")
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByUserID: func(_ context.Context, _ string) (*domain.Professional, error) { return nil, repoErr },
-	})
+	}, nil)
 
 	_, err := svc.GetByUserID(context.Background(), "user-1")
 	if !errors.Is(err, repoErr) {
@@ -146,7 +146,7 @@ func TestProfessionalCreate_Success(t *testing.T) {
 			}
 			return want, nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.Create(context.Background(), input)
 	if err != nil {
@@ -172,7 +172,7 @@ func TestProfessionalCreate_WithResume(t *testing.T) {
 			}
 			return p, nil
 		},
-	})
+	}, nil)
 
 	if _, err := svc.Create(context.Background(), input); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -180,7 +180,7 @@ func TestProfessionalCreate_WithResume(t *testing.T) {
 }
 
 func TestProfessionalCreate_EmptyUserID(t *testing.T) {
-	svc := NewProfessionalService(&mockProfessionalRepo{})
+	svc := NewProfessionalService(&mockProfessionalRepo{}, nil)
 	input := ports.CreateProfessionalInput{LicenseNumber: "LIC-001", Category: domain.Nurse}
 
 	_, err := svc.Create(context.Background(), input)
@@ -190,7 +190,7 @@ func TestProfessionalCreate_EmptyUserID(t *testing.T) {
 }
 
 func TestProfessionalCreate_EmptyLicenseNumber(t *testing.T) {
-	svc := NewProfessionalService(&mockProfessionalRepo{})
+	svc := NewProfessionalService(&mockProfessionalRepo{}, nil)
 	input := ports.CreateProfessionalInput{UserID: "user-1", Category: domain.Nurse}
 
 	_, err := svc.Create(context.Background(), input)
@@ -200,7 +200,7 @@ func TestProfessionalCreate_EmptyLicenseNumber(t *testing.T) {
 }
 
 func TestProfessionalCreate_InvalidCategory(t *testing.T) {
-	svc := NewProfessionalService(&mockProfessionalRepo{})
+	svc := NewProfessionalService(&mockProfessionalRepo{}, nil)
 	input := ports.CreateProfessionalInput{
 		UserID:        "user-1",
 		LicenseNumber: "LIC-001",
@@ -214,7 +214,7 @@ func TestProfessionalCreate_InvalidCategory(t *testing.T) {
 }
 
 func TestProfessionalCreate_NegativeYears(t *testing.T) {
-	svc := NewProfessionalService(&mockProfessionalRepo{})
+	svc := NewProfessionalService(&mockProfessionalRepo{}, nil)
 	input := ports.CreateProfessionalInput{
 		UserID:            "user-1",
 		LicenseNumber:     "LIC-001",
@@ -232,7 +232,7 @@ func TestProfessionalCreate_RepoError(t *testing.T) {
 	repoErr := errors.New("db error")
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		create: func(_ context.Context, _ *domain.Professional) (*domain.Professional, error) { return nil, repoErr },
-	})
+	}, nil)
 
 	input := ports.CreateProfessionalInput{
 		UserID:        "user-1",
@@ -285,7 +285,7 @@ func TestProfessionalUpdate_AllFields(t *testing.T) {
 			}
 			return p, nil
 		},
-	})
+	}, nil)
 
 	if _, err := svc.Update(context.Background(), input); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -299,7 +299,7 @@ func TestProfessionalUpdate_PartialFields(t *testing.T) {
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return existing, nil },
 		update:  func(_ context.Context, p *domain.Professional) (*domain.Professional, error) { return p, nil },
-	})
+	}, nil)
 
 	got, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{
 		ID:            existing.ID,
@@ -320,7 +320,7 @@ func TestProfessionalUpdate_NotFound(t *testing.T) {
 	repoErr := errors.New("not found")
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return nil, repoErr },
-	})
+	}, nil)
 
 	_, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{ID: "missing"})
 	if !errors.Is(err, repoErr) {
@@ -334,7 +334,7 @@ func TestProfessionalUpdate_InvalidCategory(t *testing.T) {
 
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return existing, nil },
-	})
+	}, nil)
 
 	_, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{
 		ID:       existing.ID,
@@ -351,7 +351,7 @@ func TestProfessionalUpdate_EmptyLicenseNumber(t *testing.T) {
 
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return existing, nil },
-	})
+	}, nil)
 
 	_, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{
 		ID:            existing.ID,
@@ -368,7 +368,7 @@ func TestProfessionalUpdate_NegativeYears(t *testing.T) {
 
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return existing, nil },
-	})
+	}, nil)
 
 	_, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{
 		ID:                existing.ID,
@@ -386,7 +386,7 @@ func TestProfessionalUpdate_RepoUpdateError(t *testing.T) {
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		getByID: func(_ context.Context, _ string) (*domain.Professional, error) { return existing, nil },
 		update:  func(_ context.Context, _ *domain.Professional) (*domain.Professional, error) { return nil, repoErr },
-	})
+	}, nil)
 
 	_, err := svc.Update(context.Background(), ports.UpdateProfessionalInput{
 		ID:            existing.ID,
@@ -407,7 +407,7 @@ func TestProfessionalDelete_Success(t *testing.T) {
 			}
 			return nil
 		},
-	})
+	}, nil)
 
 	if err := svc.Delete(context.Background(), "prof-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -418,7 +418,7 @@ func TestProfessionalDelete_RepoError(t *testing.T) {
 	repoErr := errors.New("delete failed")
 	svc := NewProfessionalService(&mockProfessionalRepo{
 		delete: func(_ context.Context, _ string) error { return repoErr },
-	})
+	}, nil)
 
 	if err := svc.Delete(context.Background(), "prof-1"); !errors.Is(err, repoErr) {
 		t.Errorf("expected repoErr, got: %v", err)
@@ -430,20 +430,20 @@ func TestProfessionalDelete_RepoError(t *testing.T) {
 func TestProfessionalFindWithFilters_NoFilters(t *testing.T) {
 	list := []*domain.Professional{makeProfessional(), makeProfessional()}
 	svc := NewProfessionalService(&mockProfessionalRepo{
-		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, error) {
+		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
 			if f.City != nil || f.State != nil || len(f.DayOfWeek) != 0 || len(f.Shift) != 0 {
 				t.Errorf("expected empty filters, got: %+v", f)
 			}
-			return list, nil
+			return list, int64(len(list)), nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.FindWithFilters(context.Background(), ports.ProfessionalFilters{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != len(list) {
-		t.Errorf("len: got %d, want %d", len(got), len(list))
+	if len(got.Items) != len(list) {
+		t.Errorf("len: got %d, want %d", len(got.Items), len(list))
 	}
 }
 
@@ -459,49 +459,49 @@ func TestProfessionalFindWithFilters_WithFilters(t *testing.T) {
 	list := []*domain.Professional{makeProfessional()}
 
 	svc := NewProfessionalService(&mockProfessionalRepo{
-		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, error) {
+		findWithFilters: func(_ context.Context, f ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
 			if f.City == nil || *f.City != city {
 				t.Errorf("City: got %v, want %s", f.City, city)
 			}
 			if f.State == nil || *f.State != state {
 				t.Errorf("State: got %v, want %s", f.State, state)
 			}
-			return list, nil
+			return list, int64(len(list)), nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.FindWithFilters(context.Background(), filters)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != 1 {
-		t.Errorf("len: got %d, want 1", len(got))
+	if len(got.Items) != 1 {
+		t.Errorf("len: got %d, want 1", len(got.Items))
 	}
 }
 
 func TestProfessionalFindWithFilters_EmptyResult(t *testing.T) {
 	svc := NewProfessionalService(&mockProfessionalRepo{
-		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) ([]*domain.Professional, error) {
-			return []*domain.Professional{}, nil
+		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
+			return []*domain.Professional{}, 0, nil
 		},
-	})
+	}, nil)
 
 	got, err := svc.FindWithFilters(context.Background(), ports.ProfessionalFilters{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(got) != 0 {
-		t.Errorf("expected empty slice, got %d items", len(got))
+	if len(got.Items) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(got.Items))
 	}
 }
 
 func TestProfessionalFindWithFilters_RepoError(t *testing.T) {
 	repoErr := errors.New("db error")
 	svc := NewProfessionalService(&mockProfessionalRepo{
-		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) ([]*domain.Professional, error) {
-			return nil, repoErr
+		findWithFilters: func(_ context.Context, _ ports.ProfessionalFilters) ([]*domain.Professional, int64, error) {
+			return nil, 0, repoErr
 		},
-	})
+	}, nil)
 
 	_, err := svc.FindWithFilters(context.Background(), ports.ProfessionalFilters{})
 	if !errors.Is(err, repoErr) {

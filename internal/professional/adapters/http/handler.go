@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	professionalPorts "github.com/diegoHDCz/ajudafio/internal/professional/ports"
@@ -210,7 +211,9 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // @Param        state        query     string    false  "Estado (UF)"
 // @Param        day_of_week  query     []string  false  "Dias da semana"  collectionFormat(multi)
 // @Param        shift        query     []string  false  "Turnos"          collectionFormat(multi)
-// @Success      200  {array}   professionalResponse
+// @Param        page         query     int       false  "Página"
+// @Param        page_size    query     int       false  "Itens por página"
+// @Success      200  {object}  professionalPageResponse
 // @Failure      500  {string}  string
 // @Router       /professionals [get]
 func (h *ProfessionalHandler) FindWithFilters(w http.ResponseWriter, r *http.Request) {
@@ -228,16 +231,19 @@ func (h *ProfessionalHandler) FindWithFilters(w http.ResponseWriter, r *http.Req
 	if shifts := q["shift"]; len(shifts) > 0 {
 		filters.Shift = shifts
 	}
-	list, err := h.professionalSvc.FindWithFilters(r.Context(), filters)
+	if page, err := strconv.Atoi(q.Get("page")); err == nil {
+		filters.Page = page
+	}
+	if pageSize, err := strconv.Atoi(q.Get("page_size")); err == nil {
+		filters.PageSize = pageSize
+	}
+
+	page, err := h.professionalSvc.FindWithFilters(r.Context(), filters)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	resp := make([]professionalResponse, len(list))
-	for i, p := range list {
-		resp[i] = toResponse(p)
-	}
-	respond(w, http.StatusOK, resp)
+	respond(w, http.StatusOK, toPageResponse(page))
 }
 
 func respond(w http.ResponseWriter, status int, body any) {

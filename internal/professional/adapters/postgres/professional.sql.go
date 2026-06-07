@@ -11,6 +11,43 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countProfessionals = `-- name: CountProfessionals :one
+SELECT COUNT(*)
+FROM professionals p
+WHERE
+    ($1::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.city = $1::text
+    ))
+    AND ($2::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.state = $2::text
+    ))
+    AND ($3::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.day_of_week = ANY($3::text[])
+    ))
+    AND ($4::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.shift = ANY($4::text[])
+    ))
+`
+
+type CountProfessionalsParams struct {
+	City      *string  `json:"city"`
+	State     *string  `json:"state"`
+	DayOfWeek []string `json:"day_of_week"`
+	Shift     []string `json:"shift"`
+}
+
+func (q *Queries) CountProfessionals(ctx context.Context, arg CountProfessionalsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countProfessionals,
+		arg.City,
+		arg.State,
+		arg.DayOfWeek,
+		arg.Shift,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProfessional = `-- name: CreateProfessional :one
 INSERT INTO professionals (
   user_id,
@@ -125,7 +162,7 @@ func (q *Queries) GetProfessionalByUserID(ctx context.Context, userID pgtype.UUI
 }
 
 const listProfessionals = `-- name: ListProfessionals :many
-SELECT DISTINCT
+SELECT
     p.id,
     p.user_id,
     p.license_number,
@@ -135,16 +172,28 @@ SELECT DISTINCT
     p.resume,
     p.metadata,
     p.created_at,
-    p.updated_at
+    p.updated_at,
+    u.name AS user_name,
+    u.avatar_url AS user_avatar_url,
+    u.email AS user_email,
+    u.role AS user_role
 FROM professionals p
-LEFT JOIN addresses a ON p.user_id = a.user_id
-LEFT JOIN availabilities av ON p.id = av.professional_id
+LEFT JOIN users u ON p.user_id = u.id
 WHERE
-    ($1::text IS NULL OR a.city = $1::text)
-    AND ($2::text IS NULL OR a.state = $2::text)
-    AND ($3::text[] IS NULL OR av.day_of_week = ANY($3::text[]))
-    AND ($4::text[] IS NULL OR av.shift = ANY($4::text[]))
+    ($1::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.city = $1::text
+    ))
+    AND ($2::text IS NULL OR EXISTS (
+        SELECT 1 FROM addresses a WHERE a.user_id = p.user_id AND a.state = $2::text
+    ))
+    AND ($3::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.day_of_week = ANY($3::text[])
+    ))
+    AND ($4::text[] IS NULL OR EXISTS (
+        SELECT 1 FROM availabilities av WHERE av.professional_id = p.id AND av.shift = ANY($4::text[])
+    ))
 ORDER BY p.created_at DESC
+LIMIT $6 OFFSET $5
 `
 
 type ListProfessionalsParams struct {
@@ -152,22 +201,43 @@ type ListProfessionalsParams struct {
 	State     *string  `json:"state"`
 	DayOfWeek []string `json:"day_of_week"`
 	Shift     []string `json:"shift"`
+	OffsetVal int32    `json:"offset_val"`
+	LimitVal  int32    `json:"limit_val"`
 }
 
-func (q *Queries) ListProfessionals(ctx context.Context, arg ListProfessionalsParams) ([]Professional, error) {
+type ListProfessionalsRow struct {
+	ID                pgtype.UUID      `json:"id"`
+	UserID            pgtype.UUID      `json:"user_id"`
+	LicenseNumber     *string          `json:"license_number"`
+	Category          string           `json:"category"`
+	YearsOfExperience *int32           `json:"years_of_experience"`
+	Verified          bool             `json:"verified"`
+	Resume            *string          `json:"resume"`
+	Metadata          []byte           `json:"metadata"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	UserName          *string          `json:"user_name"`
+	UserAvatarUrl     *string          `json:"user_avatar_url"`
+	UserEmail         *string          `json:"user_email"`
+	UserRole          *string          `json:"user_role"`
+}
+
+func (q *Queries) ListProfessionals(ctx context.Context, arg ListProfessionalsParams) ([]ListProfessionalsRow, error) {
 	rows, err := q.db.Query(ctx, listProfessionals,
 		arg.City,
 		arg.State,
 		arg.DayOfWeek,
 		arg.Shift,
+		arg.OffsetVal,
+		arg.LimitVal,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Professional
+	var items []ListProfessionalsRow
 	for rows.Next() {
-		var i Professional
+		var i ListProfessionalsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
@@ -179,6 +249,10 @@ func (q *Queries) ListProfessionals(ctx context.Context, arg ListProfessionalsPa
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserName,
+			&i.UserAvatarUrl,
+			&i.UserEmail,
+			&i.UserRole,
 		); err != nil {
 			return nil, err
 		}

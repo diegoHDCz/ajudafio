@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -13,9 +14,10 @@ import (
 )
 
 type Provider struct {
-	client *s3.Client
-	bucket string
-	region string
+	client        *s3.Client
+	presignClient *s3.PresignClient
+	bucket        string
+	region        string
 }
 
 func New(accessKeyID, secretAccessKey, region, bucket string) storagePorts.StorageProvider {
@@ -28,10 +30,12 @@ func New(accessKeyID, secretAccessKey, region, bucket string) storagePorts.Stora
 	if err != nil {
 		panic(fmt.Sprintf("s3provider: failed to load AWS config: %v", err))
 	}
+	client := s3.NewFromConfig(cfg)
 	return &Provider{
-		client: s3.NewFromConfig(cfg),
-		bucket: bucket,
-		region: region,
+		client:        client,
+		presignClient: s3.NewPresignClient(client),
+		bucket:        bucket,
+		region:        region,
 	}
 }
 
@@ -47,6 +51,17 @@ func (p *Provider) Upload(ctx context.Context, key string, data []byte, contentT
 	}
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", p.bucket, p.region, key)
 	return url, nil
+}
+
+func (p *Provider) GetSignedURL(ctx context.Context, key string, expiresIn time.Duration) (string, error) {
+	req, err := p.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(p.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(expiresIn))
+	if err != nil {
+		return "", fmt.Errorf("s3provider.GetSignedURL: %w", err)
+	}
+	return req.URL, nil
 }
 
 func (p *Provider) Delete(ctx context.Context, key string) error {

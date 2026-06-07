@@ -79,7 +79,7 @@ func (s *stubProfSvc) Update(_ context.Context, _ profports.UpdateProfessionalIn
 	return nil, errors.New("not implemented")
 }
 func (s *stubProfSvc) Delete(_ context.Context, _ string) error { return errors.New("not implemented") }
-func (s *stubProfSvc) FindWithFilters(_ context.Context, _ profports.ProfessionalFilters) ([]*profdomain.Professional, error) {
+func (s *stubProfSvc) FindWithFilters(_ context.Context, _ profports.ProfessionalFilters) (*profports.ProfessionalPage, error) {
 	return nil, errors.New("not implemented")
 }
 

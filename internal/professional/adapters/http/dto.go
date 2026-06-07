@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/diegoHDCz/ajudafio/internal/professional/domain"
+	professionalPorts "github.com/diegoHDCz/ajudafio/internal/professional/ports"
 )
 
 type createProfessionalRequest struct {
@@ -36,6 +37,32 @@ type professionalResponse struct {
 	Metadata          json.RawMessage `json:"metadata,omitempty" swaggertype:"object"`
 	CreatedAt         string          `json:"created_at"`
 	UpdatedAt         string          `json:"updated_at"`
+	Name              *string         `json:"name,omitempty"`
+	AvatarURL         *string         `json:"avatar_url,omitempty"`
+	Email             *string         `json:"email,omitempty"`
+	Role              *string         `json:"role,omitempty"`
+}
+
+type professionalPageResponse struct {
+	Items      []professionalResponse `json:"items"`
+	Total      int64                  `json:"total"`
+	Page       int                    `json:"page"`
+	PageSize   int                    `json:"page_size"`
+	TotalPages int                    `json:"total_pages"`
+}
+
+func toPageResponse(page *professionalPorts.ProfessionalPage) professionalPageResponse {
+	items := make([]professionalResponse, len(page.Items))
+	for i, p := range page.Items {
+		items[i] = toResponse(p)
+	}
+	return professionalPageResponse{
+		Items:      items,
+		Total:      page.Total,
+		Page:       page.Page,
+		PageSize:   page.PageSize,
+		TotalPages: page.TotalPages,
+	}
 }
 
 func toResponse(p *domain.Professional) professionalResponse {
@@ -54,5 +81,9 @@ func toResponse(p *domain.Professional) professionalResponse {
 		Metadata:          meta,
 		CreatedAt:         p.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:         p.UpdatedAt.Format(time.RFC3339),
+		Name:              p.UserName,
+		AvatarURL:         p.UserAvatarURL,
+		Email:             p.UserEmail,
+		Role:              p.UserRole,
 	}
 }
