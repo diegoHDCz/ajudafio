@@ -112,15 +112,33 @@ func (q *Queries) DeleteProfessional(ctx context.Context, id pgtype.UUID) error 
 }
 
 const getProfessionalByID = `-- name: GetProfessionalByID :one
-SELECT id, user_id, license_number, category, years_of_experience, verified, resume, metadata, created_at, updated_at
-FROM professionals
-WHERE id = $1
+SELECT p.id, p.user_id, p.license_number, p.category, p.years_of_experience, p.verified, p.resume, p.metadata, p.created_at, p.updated_at, u.name AS user_name, u.avatar_url AS user_avatar_url, u.email AS user_email, u.role AS user_role
+FROM professionals p
+INNER JOIN users u ON p.user_id = u.id
+WHERE p.id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetProfessionalByID(ctx context.Context, id pgtype.UUID) (Professional, error) {
+type GetProfessionalByIDRow struct {
+	ID                pgtype.UUID      `json:"id"`
+	UserID            pgtype.UUID      `json:"user_id"`
+	LicenseNumber     *string          `json:"license_number"`
+	Category          string           `json:"category"`
+	YearsOfExperience *int32           `json:"years_of_experience"`
+	Verified          bool             `json:"verified"`
+	Resume            *string          `json:"resume"`
+	Metadata          []byte           `json:"metadata"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	UserName          string           `json:"user_name"`
+	UserAvatarUrl     *string          `json:"user_avatar_url"`
+	UserEmail         string           `json:"user_email"`
+	UserRole          string           `json:"user_role"`
+}
+
+func (q *Queries) GetProfessionalByID(ctx context.Context, id pgtype.UUID) (GetProfessionalByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProfessionalByID, id)
-	var i Professional
+	var i GetProfessionalByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -132,6 +150,10 @@ func (q *Queries) GetProfessionalByID(ctx context.Context, id pgtype.UUID) (Prof
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserName,
+		&i.UserAvatarUrl,
+		&i.UserEmail,
+		&i.UserRole,
 	)
 	return i, err
 }

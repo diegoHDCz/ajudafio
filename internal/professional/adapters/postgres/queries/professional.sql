@@ -1,7 +1,8 @@
 -- name: GetProfessionalByID :one
-SELECT id, user_id, license_number, category, years_of_experience, verified, resume, metadata, created_at, updated_at
-FROM professionals
-WHERE id = @id
+SELECT p.id, p.user_id, p.license_number, p.category, p.years_of_experience, p.verified, p.resume, p.metadata, p.created_at, p.updated_at, u.name AS user_name, u.avatar_url AS user_avatar_url, u.email AS user_email, u.role AS user_role
+FROM professionals p
+INNER JOIN users u ON p.user_id = u.id
+WHERE p.id = @id
 LIMIT 1;
 
 -- name: GetProfessionalByUserID :one

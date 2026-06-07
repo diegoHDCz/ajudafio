@@ -37,7 +37,24 @@ func (r *repository) GetByID(ctx context.Context, id string) (*domain.Profession
 		}
 		return nil, fmt.Errorf("professionalpostgres.GetByID: %w", err)
 	}
-	return toDomain(row), nil
+
+	p := toDomain(Professional{
+		ID:                row.ID,
+		UserID:            row.UserID,
+		LicenseNumber:     row.LicenseNumber,
+		Category:          row.Category,
+		YearsOfExperience: row.YearsOfExperience,
+		Verified:          row.Verified,
+		Resume:            row.Resume,
+		Metadata:          row.Metadata,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
+	})
+	p.UserName = &row.UserName
+	p.UserAvatarURL = row.UserAvatarUrl
+	p.UserEmail = &row.UserEmail
+	p.UserRole = &row.UserRole
+	return p, nil
 }
 
 func (r *repository) GetByUserID(ctx context.Context, userID string) (*domain.Professional, error) {
