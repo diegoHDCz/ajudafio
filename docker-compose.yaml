@@ -9,15 +9,3 @@ services:
       - "${APP_PORT:-8080}:8080"
     env_file:
       - .env
-
-  migrate:
-    image: migrate/migrate:v4.17.1
-    container_name: ajudafio_migrate
-    profiles:
-      - migrate
-    volumes:
-      - ./migrations:/migrations
-    command: >
-      -path=/migrations
-      -database=${DATABASE_URL}
-      up
