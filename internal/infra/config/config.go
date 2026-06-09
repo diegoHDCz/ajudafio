@@ -9,22 +9,20 @@ import (
 )
 
 type Config struct {
-	AppPort           string
-	DatabaseURL       string
-	ClerkJWKSURL      string
-	AWSAccessKeyID    string
+	AppPort            string
+	DatabaseURL        string
+	ClerkJWKSURL       string
+	AWSAccessKeyID     string
 	AWSSecretAccessKey string
-	AWSRegion         string
-	AWSS3BucketName   string
+	AWSRegion          string
+	AWSS3BucketName    string
 	// MigrationsPath string
 }
 
 func Load() *Config {
 	// if os.Getenv("ENVIRONMENT") == "DEV" {
-		err := godotenv.Load()
-		if err != nil {
-			panic("Was not possible to load .env")
-		}
+	_ = godotenv.Load()
+
 	// }
 	return &Config{
 		AppPort:            getEnv("APP_PORT", "8080"),
