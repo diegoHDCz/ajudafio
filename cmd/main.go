@@ -26,6 +26,9 @@ import (
 	appointment "github.com/diegoHDCz/ajudafio/internal/appointment"
 	appointmenthttp "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/http"
 	appointmentpostgres "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/postgres"
+	authsvc "github.com/diegoHDCz/ajudafio/internal/auth"
+	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
+	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
@@ -86,8 +89,14 @@ func main() {
 
 	userHandler := userhttp.NewHandler(userSvc, validator)
 
+	// ── Wire: auth slice ──────────────────────────────────────────────────────
+	jwtSecret := []byte(cfg.JWTSecret)
+	authRepo := authpostgres.NewRepository(db)
+	authSvc := authsvc.NewService(authRepo, userSvc, jwtSecret)
+	authHandler := authhttp.NewHandler(authSvc)
+
 	// ── Wire: middleware request ──────────────────────────────────────────────────────
-	authMW, err := authmiddleware.NewAuthMiddleware(context.Background(), cfg.ClerkJWKSURL)
+	authMW, err := authmiddleware.NewAuthMiddleware(jwtSecret)
 	if err != nil {
 		slog.Error("failed to initialize auth middleware", "error", err)
 		os.Exit(1)
@@ -161,10 +170,12 @@ func main() {
 		})
 	})
 
+	r.Mount("/auth", authhttp.NewRouter(authHandler))
+
 	r.Route("/users", func(r chi.Router) {
-		r.Post("/", userHandler.Create)
 		r.Group(func(r chi.Router) {
 			r.Use(authMW.RequestAuth)
+			r.Post("/", userHandler.Create)
 			r.Get("/me", userHandler.Me)
 			r.Get("/{id}", userHandler.GetByID)
 			r.Patch("/{id}", userHandler.Update)

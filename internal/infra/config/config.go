@@ -11,7 +11,7 @@ import (
 type Config struct {
 	AppPort            string
 	DatabaseURL        string
-	ClerkJWKSURL       string
+	JWTSecret          string
 	AWSAccessKeyID     string
 	AWSSecretAccessKey string
 	AWSRegion          string
@@ -27,7 +27,7 @@ func Load() *Config {
 	return &Config{
 		AppPort:            getEnv("APP_PORT", "8080"),
 		DatabaseURL:        mustGetEnv("DATABASE_URL"),
-		ClerkJWKSURL:       mustGetEnv("CLERK_JWKS_URL"),
+		JWTSecret:          mustGetEnv("JWT_SECRET"),
 		AWSAccessKeyID:     mustGetEnv("AWS_ACCESS_KEY_ID"),
 		AWSSecretAccessKey: mustGetEnv("AWS_SECRET_ACCESS_KEY"),
 		AWSRegion:          mustGetEnv("AWS_REGION"),

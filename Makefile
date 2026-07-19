@@ -51,6 +51,7 @@ sqlc: ## Regenerate type-safe Go code from SQL queries
 		sqlc generate -f internal/availability/sqlc.yaml
 		sqlc generate -f internal/address/sqlc.yaml
 		sqlc generate -f internal/contract/sqlc.yaml
+		sqlc generate -f internal/auth/sqlc.yaml
 
 # ── Docker ─────────────────────────────────────────────────────────────────────
  

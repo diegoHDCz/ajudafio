@@ -138,7 +138,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !authmiddleware.IsAdmin(claims) && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
+	isAdmin := authmiddleware.IsAdmin(claims)
+	if !isAdmin && !h.validator.ValidateSameUserID(r.Context(), claims.Email, id) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -149,12 +150,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Only an admin may change a user's role; a self-edit silently ignores the field
+	// to prevent privilege escalation via PATCH /users/{own-id}.
+	role := body.Role
+	if !isAdmin {
+		role = nil
+	}
+
 	user, err := h.svc.Update(r.Context(), ports.UpdateUserInput{
 		ID:    id,
 		Name:  body.Name,
 		Email: body.Email,
 		Phone: body.Phone,
-		Role:  body.Role,
+		Role:  role,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

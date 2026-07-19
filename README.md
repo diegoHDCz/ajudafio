@@ -12,6 +12,6 @@ Architecture decision records and diagrams are located in the [`docs/`](./docs) 
 ## Tech Stack
 
 - **Language:** Go
-- **Identity Provider:** Keycloak
+- **Auth:** Self-hosted JWT (HS256, access + refresh tokens)
 - **Database:** PostgreSQL
 - **Architecture:** Hexagonal (Ports & Adapters) with vertical slicing

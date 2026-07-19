@@ -271,7 +271,7 @@ func TestUserUpdate_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/"+string(user.ID), bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -286,7 +286,7 @@ func TestUserUpdate_InvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -307,7 +307,7 @@ func TestUserUpdate_ServiceError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -342,7 +342,7 @@ func TestUserDelete_Success(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -361,7 +361,7 @@ func TestUserDelete_ServiceError(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

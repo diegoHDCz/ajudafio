@@ -6,25 +6,25 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/MicahParks/keyfunc/v3"
+	auth "github.com/diegoHDCz/ajudafio/internal/auth"
 	"github.com/diegoHDCz/ajudafio/internal/auth/domain"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type contextKey string
 
 const claimsKey contextKey = "claims"
 
+const minSecretLen = 32
+
 type AuthMiddleware struct {
-	jwks keyfunc.Keyfunc
+	secret []byte
 }
 
-func NewAuthMiddleware(ctx context.Context, jwksURL string) (*AuthMiddleware, error) {
-	jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize JWKS from %s: %w", jwksURL, err)
+func NewAuthMiddleware(secret []byte) (*AuthMiddleware, error) {
+	if len(secret) < minSecretLen {
+		return nil, fmt.Errorf("JWT secret must be at least %d bytes", minSecretLen)
 	}
-	return &AuthMiddleware{jwks: jwks}, nil
+	return &AuthMiddleware{secret: secret}, nil
 }
 
 func (m *AuthMiddleware) RequestAuth(next http.Handler) http.Handler {
@@ -35,7 +35,7 @@ func (m *AuthMiddleware) RequestAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		claims, err := parseToken(rawToken, m.jwks)
+		claims, err := auth.ValidateAccessToken(m.secret, rawToken)
 		if err != nil {
 			http.Error(w, "invalid or expired token", http.StatusUnauthorized)
 			return
@@ -44,15 +44,6 @@ func (m *AuthMiddleware) RequestAuth(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), claimsKey, claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func parseToken(tokenString string, jwks keyfunc.Keyfunc) (*domain.JWTClaims, error) {
-	claims := &domain.JWTClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, jwks.Keyfunc)
-	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token: %w", err)
-	}
-	return claims, nil
 }
 
 func extractBearer(r *http.Request) (string, error) {
@@ -78,9 +69,9 @@ func WithClaims(ctx context.Context, claims *domain.JWTClaims) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)
 }
 
-// IsAdmin reports whether the claims include the "admin" role.
+// IsAdmin reports whether the claims include the "ADMIN" role.
 func IsAdmin(claims *domain.JWTClaims) bool {
-	return claims.Role == "admin"
+	return claims.Role == "ADMIN"
 }
 
 type httpError struct{ msg string }

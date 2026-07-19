@@ -399,7 +399,7 @@ func TestProfUpdate_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/"+p.ID, bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -414,7 +414,7 @@ func TestProfUpdate_InvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/prof-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -435,7 +435,7 @@ func TestProfUpdate_ServiceError(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPatch, "/prof-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "admin",
+		Role: "ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -528,7 +528,7 @@ func TestProfDelete_OwnerCanDelete(t *testing.T) {
 
 func TestProfDelete_AdminCanDelete(t *testing.T) {
 	p := makeTestProfessional() // UserID = "user-1"
-	claims := &authdomain.JWTClaims{Role: "admin"}
+	claims := &authdomain.JWTClaims{Role: "ADMIN"}
 	svc := &mockProfSvc{
 		getByID:  func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
 		deleteFn: func(_ context.Context, _ string) error { return nil },
@@ -546,7 +546,7 @@ func TestProfDelete_AdminCanDelete(t *testing.T) {
 
 func TestProfDelete_ServiceError(t *testing.T) {
 	p := makeTestProfessional()
-	claims := &authdomain.JWTClaims{Role: "admin"}
+	claims := &authdomain.JWTClaims{Role: "ADMIN"}
 	svc := &mockProfSvc{
 		getByID:  func(_ context.Context, _ string) (*domain.Professional, error) { return p, nil },
 		deleteFn: func(_ context.Context, _ string) error { return errors.New("delete failed") },

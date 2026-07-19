@@ -97,7 +97,7 @@ func newAddrRouter(svc ports.AddressService) http.Handler {
 }
 
 func adminClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{Role: "admin"}
+	return &authdomain.JWTClaims{Role: "ADMIN"}
 }
 
 // --- GetByID ---
