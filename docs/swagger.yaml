@@ -30,8 +30,6 @@ definitions:
         type: string
       complement:
         type: string
-      contract_id:
-        type: string
       created_at:
         type: string
       district:
@@ -51,12 +49,51 @@ definitions:
       zip_code:
         type: string
     type: object
+  http.appointmentResponse:
+    properties:
+      address_line:
+        type: string
+      city:
+        type: string
+      client_id:
+        type: string
+      complement:
+        type: string
+      contract_id:
+        type: string
+      created_at:
+        type: string
+      date:
+        type: string
+      district:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: string
+      number:
+        type: string
+      professional_id:
+        type: string
+      reference:
+        type: string
+      start_time:
+        type: string
+      state:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+      zip_code:
+        type: string
+    type: object
   http.availabilityResponse:
     properties:
       day_of_week:
-        items:
-          $ref: '#/definitions/shared.WeekDay'
-        type: array
+        $ref: '#/definitions/shared.WeekDay'
       end_hour:
         type: string
       id:
@@ -64,10 +101,42 @@ definitions:
       professional_id:
         type: string
       shift:
-        items:
-          $ref: '#/definitions/shared.Shift'
-        type: array
+        $ref: '#/definitions/shared.Shift'
       start_hour:
+        type: string
+    type: object
+  http.availabilityRule:
+    properties:
+      day_of_week:
+        $ref: '#/definitions/shared.WeekDay'
+      end_hour:
+        type: string
+      shift:
+        $ref: '#/definitions/shared.Shift'
+      start_hour:
+        type: string
+    type: object
+  http.bookingRequestResponse:
+    properties:
+      address_id:
+        type: string
+      client_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      professional_id:
+        type: string
+      proposed_value:
+        type: number
+      rejection_reason:
+        type: string
+      responded_at:
+        type: string
+      schedule_details:
+        $ref: '#/definitions/http.scheduleDetailsResponse'
+      status:
         type: string
     type: object
   http.contractResponse:
@@ -109,8 +178,6 @@ definitions:
         type: string
       complement:
         type: string
-      contract_id:
-        type: string
       district:
         type: string
       number:
@@ -124,22 +191,61 @@ definitions:
       zip_code:
         type: string
     type: object
-  http.createAvailabilityRequest:
+  http.createAppointmentRequest:
     properties:
-      day_of_week:
-        items:
-          $ref: '#/definitions/shared.WeekDay'
-        type: array
-      end_hour:
+      address_line:
+        type: string
+      city:
+        type: string
+      client_id:
+        type: string
+      complement:
+        type: string
+      contract_id:
+        type: string
+      date:
+        description: '"2006-01-02"'
+        type: string
+      district:
+        type: string
+      end_time:
+        description: '"15:04"'
+        type: string
+      number:
         type: string
       professional_id:
         type: string
-      shift:
-        items:
-          $ref: '#/definitions/shared.Shift'
-        type: array
-      start_hour:
+      reference:
         type: string
+      start_time:
+        description: '"15:04"'
+        type: string
+      state:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  http.createAvailabilityRequest:
+    properties:
+      availabilities:
+        items:
+          $ref: '#/definitions/http.availabilityRule'
+        type: array
+      professional_id:
+        type: string
+    type: object
+  http.createBookingRequestRequest:
+    properties:
+      address_id:
+        type: string
+      client_id:
+        type: string
+      professional_id:
+        type: string
+      proposed_value:
+        type: number
+      schedule_details:
+        $ref: '#/definitions/http.scheduleDetailsRequest'
     type: object
   http.createContractRequest:
     properties:
@@ -193,18 +299,53 @@ definitions:
       role:
         $ref: '#/definitions/domain.Role'
     type: object
+  http.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  http.logoutRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
   http.meResponse:
     properties:
       email:
         type: string
+      id:
+        type: string
       name:
         type: string
+      role:
+        $ref: '#/definitions/domain.Role'
+    type: object
+  http.professionalPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/http.professionalResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   http.professionalResponse:
     properties:
+      avatar_url:
+        type: string
       category:
         $ref: '#/definitions/domain.Category'
       created_at:
+        type: string
+      email:
         type: string
       id:
         type: string
@@ -212,7 +353,11 @@ definitions:
         type: string
       metadata:
         type: object
+      name:
+        type: string
       resume:
+        type: string
+      role:
         type: string
       updated_at:
         type: string
@@ -222,6 +367,73 @@ definitions:
         type: boolean
       years_of_experience:
         type: integer
+    type: object
+  http.refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  http.registerRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+    type: object
+  http.scheduleDetailsRequest:
+    properties:
+      end_date:
+        type: string
+      recurrence:
+        items:
+          $ref: '#/definitions/http.scheduleEntryRequest'
+        type: array
+      start_date:
+        type: string
+    type: object
+  http.scheduleDetailsResponse:
+    properties:
+      end_date:
+        type: string
+      recurrence:
+        items:
+          $ref: '#/definitions/http.scheduleEntryResponse'
+        type: array
+      start_date:
+        type: string
+    type: object
+  http.scheduleEntryRequest:
+    properties:
+      day_of_week:
+        type: string
+      end_time:
+        type: string
+      start_time:
+        type: string
+    type: object
+  http.scheduleEntryResponse:
+    properties:
+      day_of_week:
+        type: string
+      end_time:
+        type: string
+      start_time:
+        type: string
+    type: object
+  http.tokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
     type: object
   http.updateAddressRequest:
     properties:
@@ -245,15 +457,11 @@ definitions:
   http.updateAvailabilityRequest:
     properties:
       day_of_week:
-        items:
-          $ref: '#/definitions/shared.WeekDay'
-        type: array
+        $ref: '#/definitions/shared.WeekDay'
       end_hour:
         type: string
       shift:
-        items:
-          $ref: '#/definitions/shared.Shift'
-        type: array
+        $ref: '#/definitions/shared.Shift'
       start_hour:
         type: string
     type: object
@@ -309,6 +517,8 @@ definitions:
     type: object
   http.userResponse:
     properties:
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:
@@ -322,17 +532,31 @@ definitions:
       role:
         $ref: '#/definitions/domain.Role'
     type: object
+  internal_appointment_adapters_http.updateStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  internal_bookingrequest_adapters_http.updateStatusRequest:
+    properties:
+      rejection_reason:
+        type: string
+      status:
+        type: string
+    type: object
   shared.Shift:
     enum:
     - MORNING
     - AFTERNOON
     - NIGHT
+    - FULL_DAY
     - CUSTOM
     type: string
     x-enum-varnames:
     - ShiftMorning
     - ShiftAfternoon
     - ShiftNight
+    - ShiftFullDay
     - ShiftCustom
   shared.WeekDay:
     enum:
@@ -484,32 +708,6 @@ paths:
       summary: Atualizar endereço
       tags:
       - addresses
-  /addresses/contract/{contractID}:
-    get:
-      parameters:
-      - description: Contract ID
-        in: path
-        name: contractID
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/http.addressResponse'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Buscar endereços por Contract ID
-      tags:
-      - addresses
   /addresses/user/{userID}:
     get:
       parameters:
@@ -536,6 +734,306 @@ paths:
       summary: Buscar endereços por User ID
       tags:
       - addresses
+  /appointments:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do agendamento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createAppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.appointmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar agendamento
+      tags:
+      - appointments
+  /appointments/{id}:
+    delete:
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Remover agendamento
+      tags:
+      - appointments
+    get:
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.appointmentResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar agendamento por ID
+      tags:
+      - appointments
+  /appointments/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Novo status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_appointment_adapters_http.updateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.appointmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar status do agendamento
+      tags:
+      - appointments
+  /appointments/client/{clientID}:
+    get:
+      parameters:
+      - description: Client ID
+        in: path
+        name: clientID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.appointmentResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar agendamentos por cliente
+      tags:
+      - appointments
+  /appointments/contract/{contractID}:
+    get:
+      parameters:
+      - description: Contract ID
+        in: path
+        name: contractID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.appointmentResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar agendamentos por contrato
+      tags:
+      - appointments
+  /appointments/professional/{professionalID}:
+    get:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: professionalID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.appointmentResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar agendamentos por profissional
+      tags:
+      - appointments
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credenciais
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.logoutRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Renovar access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados de cadastro
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.tokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+      summary: Registrar novo usuário
+      tags:
+      - auth
   /availabilities:
     post:
       consumes:
@@ -553,7 +1051,9 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/http.availabilityResponse'
+            items:
+              $ref: '#/definitions/http.availabilityResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -564,7 +1064,7 @@ paths:
             type: string
       security:
       - BearerAuth: []
-      summary: Criar disponibilidade
+      summary: Criar disponibilidade (replace)
       tags:
       - availabilities
   /availabilities/{id}:
@@ -664,6 +1164,161 @@ paths:
       summary: Buscar disponibilidades por profissional
       tags:
       - availabilities
+  /booking-requests:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados da solicitação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.createBookingRequestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.bookingRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Criar solicitação de agendamento
+      tags:
+      - booking-requests
+  /booking-requests/{id}:
+    get:
+      parameters:
+      - description: Booking Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.bookingRequestResponse'
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar solicitação por ID
+      tags:
+      - booking-requests
+  /booking-requests/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Novo status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_bookingrequest_adapters_http.updateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.bookingRequestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "422":
+          description: Unprocessable Entity
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar status da solicitação
+      tags:
+      - booking-requests
+  /booking-requests/client/{clientID}:
+    get:
+      parameters:
+      - description: Client ID
+        in: path
+        name: clientID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.bookingRequestResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar solicitações por cliente
+      tags:
+      - booking-requests
+  /booking-requests/professional/{professionalID}:
+    get:
+      parameters:
+      - description: Professional ID
+        in: path
+        name: professionalID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/http.bookingRequestResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Buscar solicitações por profissional
+      tags:
+      - booking-requests
   /contracts:
     get:
       produces:
@@ -949,15 +1604,21 @@ paths:
           type: string
         name: shift
         type: array
+      - description: Página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: page_size
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/http.professionalResponse'
-            type: array
+            $ref: '#/definitions/http.professionalPageResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -1234,6 +1895,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualizar usuário
+      tags:
+      - users
+  /users/{id}/avatar:
+    patch:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Imagem de avatar
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.userResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Upload avatar do usuário
       tags:
       - users
   /users/me:
