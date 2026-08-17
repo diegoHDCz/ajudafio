@@ -2,11 +2,30 @@ package shared
 
 import (
 	"errors"
+	"net/mail"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// NormalizeEmail trims whitespace, lowercases and validates the address format,
+// so that the users.email UNIQUE constraint (case-sensitive in Postgres) can't
+// be bypassed by casing/whitespace variants of the same address.
+func NormalizeEmail(raw string) (string, error) {
+	email := strings.ToLower(strings.TrimSpace(raw))
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return "", errors.New("invalid email")
+	}
+
+	domain := email[strings.LastIndex(email, "@")+1:]
+	if !strings.Contains(domain, ".") {
+		return "", errors.New("invalid email")
+	}
+
+	return email, nil
+}
 
 func ParseUUID(s string) (pgtype.UUID, error) {
 	uid, err := uuid.Parse(s)

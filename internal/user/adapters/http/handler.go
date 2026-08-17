@@ -101,9 +101,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	email, err := shared.NormalizeEmail(body.Email)
+	if err != nil {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
 	user, err := h.svc.Create(r.Context(), ports.CreateUserInput{
 		ID:    uuid.New().String(),
-		Email: body.Email,
+		Email: email,
 		Name:  body.Name,
 		Phone: body.Phone,
 		Role:  derefRole(body.Role, domain.RoleClient),
@@ -155,6 +161,15 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	role := body.Role
 	if !isAdmin {
 		role = nil
+	}
+
+	if body.Email != nil {
+		normalized, err := shared.NormalizeEmail(*body.Email)
+		if err != nil {
+			http.Error(w, "invalid email", http.StatusBadRequest)
+			return
+		}
+		body.Email = &normalized
 	}
 
 	user, err := h.svc.Update(r.Context(), ports.UpdateUserInput{

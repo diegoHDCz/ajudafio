@@ -7,6 +7,7 @@ import (
 
 	"github.com/diegoHDCz/ajudafio/internal/auth"
 	"github.com/diegoHDCz/ajudafio/internal/auth/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -47,9 +48,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	email, err := shared.NormalizeEmail(body.Email)
+	if err != nil {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
 	pair, err := h.svc.Register(r.Context(), ports.RegisterInput{
 		Name:     body.Name,
-		Email:    body.Email,
+		Email:    email,
 		Phone:    body.Phone,
 		Password: body.Password,
 	})
@@ -85,7 +92,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pair, err := h.svc.Login(r.Context(), body.Email, body.Password)
+	email, err := shared.NormalizeEmail(body.Email)
+	if err != nil {
+		http.Error(w, "invalid email", http.StatusBadRequest)
+		return
+	}
+
+	pair, err := h.svc.Login(r.Context(), email, body.Password)
 	if err != nil {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
