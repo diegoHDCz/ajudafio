@@ -40,3 +40,30 @@ UPDATE refresh_tokens SET
   revoked_at = NOW()
 WHERE user_id = @user_id
   AND revoked_at IS NULL;
+
+-- name: DeleteExpiredRefreshTokens :exec
+DELETE FROM refresh_tokens
+WHERE expires_at < NOW() - INTERVAL '24 hours';
+
+-- name: GetIdentityByProvider :one
+SELECT id, user_id, provider, provider_user_id, email, created_at
+FROM identities
+WHERE provider = @provider
+  AND provider_user_id = @provider_user_id
+LIMIT 1;
+
+-- name: CreateIdentity :one
+INSERT INTO identities (
+  id,
+  user_id,
+  provider,
+  provider_user_id,
+  email
+) VALUES (
+  @id,
+  @user_id,
+  @provider,
+  @provider_user_id,
+  @email
+)
+RETURNING id, user_id, provider, provider_user_id, email, created_at;

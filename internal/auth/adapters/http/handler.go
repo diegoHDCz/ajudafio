@@ -25,6 +25,7 @@ func NewRouter(h *Handler) http.Handler {
 	r.Post("/login", h.Login)
 	r.Post("/refresh", h.Refresh)
 	r.Post("/logout", h.Logout)
+	r.Post("/google", h.GoogleLogin)
 	return r
 }
 
@@ -160,6 +161,39 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// @Summary      Login/cadastro com Google
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      googleLoginRequest  true  "ID token do Google Identity Services"
+// @Success      200   {object}  tokenResponse
+// @Failure      400   {string}  string
+// @Failure      401   {string}  string
+// @Router       /auth/google [post]
+func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
+	var body googleLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if body.IDToken == "" {
+		http.Error(w, "id_token is required", http.StatusBadRequest)
+		return
+	}
+
+	pair, err := h.svc.GoogleLogin(r.Context(), body.IDToken)
+	if err != nil {
+		if errors.Is(err, auth.ErrGoogleEmailUnverified) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "invalid google id token", http.StatusUnauthorized)
+		return
+	}
+
+	respond(w, http.StatusOK, toTokenResponse(pair))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

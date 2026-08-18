@@ -11,6 +11,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createIdentity = `-- name: CreateIdentity :one
+INSERT INTO identities (
+  id,
+  user_id,
+  provider,
+  provider_user_id,
+  email
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5
+)
+RETURNING id, user_id, provider, provider_user_id, email, created_at
+`
+
+type CreateIdentityParams struct {
+	ID             pgtype.UUID `json:"id"`
+	UserID         pgtype.UUID `json:"user_id"`
+	Provider       string      `json:"provider"`
+	ProviderUserID string      `json:"provider_user_id"`
+	Email          string      `json:"email"`
+}
+
+func (q *Queries) CreateIdentity(ctx context.Context, arg CreateIdentityParams) (Identity, error) {
+	row := q.db.QueryRow(ctx, createIdentity,
+		arg.ID,
+		arg.UserID,
+		arg.Provider,
+		arg.ProviderUserID,
+		arg.Email,
+	)
+	var i Identity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createRefreshToken = `-- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
   id,
@@ -47,6 +92,43 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		&i.TokenHash,
 		&i.ExpiresAt,
 		&i.RevokedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const deleteExpiredRefreshTokens = `-- name: DeleteExpiredRefreshTokens :exec
+DELETE FROM refresh_tokens
+WHERE expires_at < NOW() - INTERVAL '24 hours'
+`
+
+func (q *Queries) DeleteExpiredRefreshTokens(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredRefreshTokens)
+	return err
+}
+
+const getIdentityByProvider = `-- name: GetIdentityByProvider :one
+SELECT id, user_id, provider, provider_user_id, email, created_at
+FROM identities
+WHERE provider = $1
+  AND provider_user_id = $2
+LIMIT 1
+`
+
+type GetIdentityByProviderParams struct {
+	Provider       string `json:"provider"`
+	ProviderUserID string `json:"provider_user_id"`
+}
+
+func (q *Queries) GetIdentityByProvider(ctx context.Context, arg GetIdentityByProviderParams) (Identity, error) {
+	row := q.db.QueryRow(ctx, getIdentityByProvider, arg.Provider, arg.ProviderUserID)
+	var i Identity
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Provider,
+		&i.ProviderUserID,
+		&i.Email,
 		&i.CreatedAt,
 	)
 	return i, err

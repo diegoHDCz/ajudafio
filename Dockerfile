@@ -16,24 +16,26 @@ COPY . .
 # GOOS=linux garante que o binário funcione no container Alpine
 # CGO_ENABLED=0 cria um binário estático (sem dependências de C externas)
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/main.go
-
 # --- Estágio Final (Runtime) ---
 FROM alpine:latest
 
-# Adiciona certificados CA para permitir chamadas HTTPS externas
 RUN apk --no-cache add ca-certificates
 
-# Cria um usuário não-root por segurança (boa prática de produção)
+# Cria o usuário, mas vamos trabalhar no /app
 RUN adduser -D appuser
-USER appuser
+WORKDIR /app
 
-WORKDIR /home/appuser/
+# Altera o dono da pasta para o appuser conseguir trabalhar nela se precisar
+RUN chown appuser:appuser /app
 
-# Copia apenas o executável final do estágio de build
+# Copia o executável do builder para o /app atual
 COPY --from=builder /app/server .
 
-# Porta que a aplicação escuta (ajuste conforme seu código)
+# SE sua API precisar ler a pasta de migrations por dentro do código Go, descomente a linha abaixo:
+# COPY --from=builder /app/migrations ./migrations
+
+USER appuser
+
 EXPOSE 8080
 
-# Executa o binário
 CMD ["./server"]

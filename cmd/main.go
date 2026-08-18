@@ -30,6 +30,7 @@ import (
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
 	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	authports "github.com/diegoHDCz/ajudafio/internal/auth/ports"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
@@ -92,8 +93,14 @@ func main() {
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
 	jwtSecret := []byte(cfg.JWTSecret)
 	authRepo := authpostgres.NewRepository(db)
-	authSvc := authsvc.NewService(authRepo, userSvc, jwtSecret)
+	googleVerifier := authsvc.NewGoogleTokenVerifier(cfg.GoogleClientID)
+	authSvc := authsvc.NewService(authRepo, userSvc, jwtSecret, googleVerifier)
 	authHandler := authhttp.NewHandler(authSvc)
+
+	// ── Background: purge refresh tokens 24h past expiry ─────────────────────
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	defer cleanupCancel()
+	go runExpiredRefreshTokenCleanup(cleanupCtx, authRepo)
 
 	// ── Wire: middleware request ──────────────────────────────────────────────────────
 	authMW, err := authmiddleware.NewAuthMiddleware(jwtSecret)
@@ -227,4 +234,28 @@ func main() {
 	}
 
 	slog.Info("server exited")
+}
+
+// runExpiredRefreshTokenCleanup periodically purges refresh tokens that have
+// been expired for more than 24h, running once on startup and then hourly.
+func runExpiredRefreshTokenCleanup(ctx context.Context, repo authports.AuthRepository) {
+	purge := func() {
+		if err := repo.DeleteExpiredRefreshTokens(ctx); err != nil {
+			slog.Error("failed to purge expired refresh tokens", "error", err)
+		}
+	}
+
+	purge()
+
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			purge()
+		}
+	}
 }

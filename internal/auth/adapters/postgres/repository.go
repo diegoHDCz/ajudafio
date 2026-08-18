@@ -107,6 +107,41 @@ func (r *repository) RevokeAllRefreshTokensForUser(ctx context.Context, userID s
 	return nil
 }
 
+func (r *repository) DeleteExpiredRefreshTokens(ctx context.Context) error {
+	if err := r.queries.DeleteExpiredRefreshTokens(ctx); err != nil {
+		return fmt.Errorf("authpostgres.DeleteExpiredRefreshTokens: %w", err)
+	}
+	return nil
+}
+
+func (r *repository) GetIdentityByProvider(ctx context.Context, provider, providerUserID string) (*authdomain.Identity, error) {
+	row, err := r.queries.GetIdentityByProvider(ctx, GetIdentityByProviderParams{
+		Provider:       provider,
+		ProviderUserID: providerUserID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("authpostgres.GetIdentityByProvider: %w", err)
+	}
+	return mapIdentity(row), nil
+}
+
+func (r *repository) CreateIdentity(ctx context.Context, userID uuid.UUID, provider, providerUserID, email string) (*authdomain.Identity, error) {
+	row, err := r.queries.CreateIdentity(ctx, CreateIdentityParams{
+		ID:             pgtype.UUID{Bytes: uuid.New(), Valid: true},
+		UserID:         pgtype.UUID{Bytes: userID, Valid: true},
+		Provider:       provider,
+		ProviderUserID: providerUserID,
+		Email:          email,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("authpostgres.CreateIdentity: %w", err)
+	}
+	return mapIdentity(row), nil
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func mapRefreshToken(row RefreshToken) *authdomain.RefreshToken {
@@ -121,6 +156,17 @@ func mapRefreshToken(row RefreshToken) *authdomain.RefreshToken {
 		ExpiresAt: row.ExpiresAt.Time,
 		RevokedAt: revokedAt,
 		CreatedAt: row.CreatedAt.Time,
+	}
+}
+
+func mapIdentity(row Identity) *authdomain.Identity {
+	return &authdomain.Identity{
+		ID:             uuid.UUID(row.ID.Bytes).String(),
+		UserID:         uuid.UUID(row.UserID.Bytes).String(),
+		Provider:       row.Provider,
+		ProviderUserID: row.ProviderUserID,
+		Email:          row.Email,
+		CreatedAt:      row.CreatedAt.Time,
 	}
 }
 

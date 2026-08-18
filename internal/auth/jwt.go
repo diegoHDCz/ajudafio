@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	AccessTokenTTL  = 15 * time.Minute
+	AccessTokenTTL  = 4 * time.Hour
 	RefreshTokenTTL = 7 * 24 * time.Hour
 	tokenIssuer     = "ajudafio"
 )

@@ -9,3 +9,6 @@ services:
       - "${APP_PORT:-8080}:8080"
     env_file:
       - .env
+    volumes:
+      # Joga o .env fisicamente para onde o binário está rodando
+      - ./.env:/app/.env

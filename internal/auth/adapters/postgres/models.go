@@ -85,6 +85,15 @@ type Contract struct {
 	TotalHours     int32            `json:"total_hours"`
 }
 
+type Identity struct {
+	ID             pgtype.UUID      `json:"id"`
+	UserID         pgtype.UUID      `json:"user_id"`
+	Provider       string           `json:"provider"`
+	ProviderUserID string           `json:"provider_user_id"`
+	Email          string           `json:"email"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+}
+
 type Professional struct {
 	ID                pgtype.UUID      `json:"id"`
 	UserID            pgtype.UUID      `json:"user_id"`

@@ -16,6 +16,7 @@ type Config struct {
 	AWSSecretAccessKey string
 	AWSRegion          string
 	AWSS3BucketName    string
+	GoogleClientID     string
 	// MigrationsPath string
 }
 
@@ -32,6 +33,7 @@ func Load() *Config {
 		AWSSecretAccessKey: mustGetEnv("AWS_SECRET_ACCESS_KEY"),
 		AWSRegion:          mustGetEnv("AWS_REGION"),
 		AWSS3BucketName:    mustGetEnv("AWS_S3_BUCKET_NAME"),
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		// MigrationsPath: getEnv("MIGRATIONS_PATH", "./migrations"),
 	}
 }

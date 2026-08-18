@@ -8,25 +8,28 @@ import (
 
 	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
 	"github.com/diegoHDCz/ajudafio/internal/auth/ports"
+	"github.com/diegoHDCz/ajudafio/internal/shared"
 	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
 	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/google/uuid"
 )
 
 var (
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrEmailAlreadyInUse   = errors.New("email already in use")
-	ErrRefreshTokenInvalid = errors.New("refresh token is no longer valid")
+	ErrInvalidCredentials    = errors.New("invalid credentials")
+	ErrEmailAlreadyInUse     = errors.New("email already in use")
+	ErrRefreshTokenInvalid   = errors.New("refresh token is no longer valid")
+	ErrGoogleEmailUnverified = errors.New("google account email is not verified")
 )
 
 type service struct {
-	repo    ports.AuthRepository
-	userSvc userports.UserService
-	secret  []byte
+	repo           ports.AuthRepository
+	userSvc        userports.UserService
+	secret         []byte
+	googleVerifier GoogleTokenVerifier
 }
 
-func NewService(repo ports.AuthRepository, userSvc userports.UserService, secret []byte) ports.AuthService {
-	return &service{repo: repo, userSvc: userSvc, secret: secret}
+func NewService(repo ports.AuthRepository, userSvc userports.UserService, secret []byte, googleVerifier GoogleTokenVerifier) ports.AuthService {
+	return &service{repo: repo, userSvc: userSvc, secret: secret, googleVerifier: googleVerifier}
 }
 
 func (s *service) Register(ctx context.Context, input ports.RegisterInput) (*authdomain.TokenPair, error) {
@@ -102,6 +105,62 @@ func (s *service) Logout(ctx context.Context, refreshToken string) error {
 		return fmt.Errorf("auth.Logout: %w", err)
 	}
 	return nil
+}
+
+func (s *service) GoogleLogin(ctx context.Context, idToken string) (*authdomain.TokenPair, error) {
+	claims, err := s.googleVerifier.Verify(ctx, idToken)
+	if err != nil {
+		return nil, fmt.Errorf("auth.GoogleLogin: %w", err)
+	}
+	if !claims.EmailVerified {
+		return nil, ErrGoogleEmailUnverified
+	}
+
+	identity, err := s.repo.GetIdentityByProvider(ctx, "google", claims.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("auth.GoogleLogin: %w", err)
+	}
+	if identity != nil {
+		user, err := s.userSvc.GetByID(ctx, identity.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("auth.GoogleLogin: %w", err)
+		}
+		return s.issueTokenPair(ctx, user.ID, user.Email, user.Name, string(user.Role))
+	}
+
+	email, err := shared.NormalizeEmail(claims.Email)
+	if err != nil {
+		return nil, fmt.Errorf("auth.GoogleLogin: invalid email from google: %w", err)
+	}
+
+	// Existing password-based account claiming the same Google-verified email:
+	// link the identity instead of creating a duplicate user.
+	user, err := s.userSvc.GetByEmail(ctx, email)
+	if err != nil {
+		name := claims.Name
+		if name == "" {
+			name = email
+		}
+		user, err = s.userSvc.Create(ctx, userports.CreateUserInput{
+			ID:    uuid.New().String(),
+			Email: email,
+			Name:  name,
+			Role:  userdomain.RoleClient,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("auth.GoogleLogin: %w", err)
+		}
+	}
+
+	userID, err := uuid.Parse(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("auth.GoogleLogin: invalid user id: %w", err)
+	}
+	if _, err := s.repo.CreateIdentity(ctx, userID, "google", claims.Subject, email); err != nil {
+		return nil, fmt.Errorf("auth.GoogleLogin: %w", err)
+	}
+
+	return s.issueTokenPair(ctx, user.ID, user.Email, user.Name, string(user.Role))
 }
 
 func (s *service) issueTokenPair(ctx context.Context, userID, email, name, role string) (*authdomain.TokenPair, error) {
