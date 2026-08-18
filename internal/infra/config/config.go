@@ -9,14 +9,15 @@ import (
 )
 
 type Config struct {
-	AppPort            string
-	DatabaseURL        string
-	JWTSecret          string
-	AWSAccessKeyID     string
-	AWSSecretAccessKey string
-	AWSRegion          string
-	AWSS3BucketName    string
-	GoogleClientID     string
+	AppPort              string
+	DatabaseURL          string
+	JWTSecret            string
+	SupabaseAccessKeyID  string
+	SupabaseSecretKey    string
+	SupabaseRegion       string
+	SupabaseBucketName   string
+	SupabaseEndpoint     string
+	GoogleClientID       string
 	// MigrationsPath string
 }
 
@@ -26,14 +27,15 @@ func Load() *Config {
 
 	// }
 	return &Config{
-		AppPort:            getEnv("APP_PORT", "8080"),
-		DatabaseURL:        mustGetEnv("DATABASE_URL"),
-		JWTSecret:          mustGetEnv("JWT_SECRET"),
-		AWSAccessKeyID:     mustGetEnv("AWS_ACCESS_KEY_ID"),
-		AWSSecretAccessKey: mustGetEnv("AWS_SECRET_ACCESS_KEY"),
-		AWSRegion:          mustGetEnv("AWS_REGION"),
-		AWSS3BucketName:    mustGetEnv("AWS_S3_BUCKET_NAME"),
-		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		AppPort:             getEnv("APP_PORT", "8080"),
+		DatabaseURL:         mustGetEnv("DATABASE_URL"),
+		JWTSecret:           mustGetEnv("JWT_SECRET"),
+		SupabaseAccessKeyID: mustGetEnv("SUPABASE_ACCESS_KEY_ID"),
+		SupabaseSecretKey:   mustGetEnv("SUPABASE_SECRET_KEY"),
+		SupabaseRegion:      mustGetEnv("SUPABASE_REGION"),
+		SupabaseBucketName:  mustGetEnv("SUPABASE_BUCKET_NAME"),
+		SupabaseEndpoint:    mustGetEnv("SUPABASE_ENDPOINT"),
+		GoogleClientID:      getEnv("GOOGLE_CLIENT_ID", ""),
 		// MigrationsPath: getEnv("MIGRATIONS_PATH", "./migrations"),
 	}
 }

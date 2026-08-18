@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -124,7 +123,7 @@ func (s *service) UploadAvatar(ctx context.Context, userID string, fileData []by
 	}
 
 	ext := extensionFromContentType(contentType)
-	key := fmt.Sprintf("avatars/%s-%d%s", userID, time.Now().UnixMilli(), ext)
+	key := fmt.Sprintf("avatar/%s-%d%s", userID, time.Now().UnixMilli(), ext)
 
 	newURL, err := s.storage.Upload(ctx, key, fileData, contentType)
 	if err != nil {
@@ -141,11 +140,11 @@ func (s *service) UploadAvatar(ctx context.Context, userID string, fileData []by
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func extractS3Key(rawURL string) string {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return ""
+	const marker = "avatar/"
+	if idx := strings.Index(rawURL, marker); idx != -1 {
+		return rawURL[idx:]
 	}
-	return strings.TrimPrefix(u.Path, "/")
+	return ""
 }
 
 func extensionFromContentType(ct string) string {

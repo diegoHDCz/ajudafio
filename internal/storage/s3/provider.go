@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -18,9 +19,12 @@ type Provider struct {
 	presignClient *s3.PresignClient
 	bucket        string
 	region        string
+	endpoint      string
 }
 
-func New(accessKeyID, secretAccessKey, region, bucket string) storagePorts.StorageProvider {
+// New creates a storage provider backed by any S3-compatible API (AWS S3,
+// Supabase Storage, etc). Pass endpoint="" to use AWS's default resolver.
+func New(accessKeyID, secretAccessKey, region, bucket, endpoint string) storagePorts.StorageProvider {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 		config.WithCredentialsProvider(
@@ -30,12 +34,20 @@ func New(accessKeyID, secretAccessKey, region, bucket string) storagePorts.Stora
 	if err != nil {
 		panic(fmt.Sprintf("s3provider: failed to load AWS config: %v", err))
 	}
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+			// Supabase (and most S3-compatible providers) only support
+			// path-style addressing, not virtual-hosted-style buckets.
+			o.UsePathStyle = true
+		}
+	})
 	return &Provider{
 		client:        client,
 		presignClient: s3.NewPresignClient(client),
 		bucket:        bucket,
 		region:        region,
+		endpoint:      endpoint,
 	}
 }
 
@@ -48,6 +60,10 @@ func (p *Provider) Upload(ctx context.Context, key string, data []byte, contentT
 	})
 	if err != nil {
 		return "", fmt.Errorf("s3provider.Upload: %w", err)
+	}
+	if p.endpoint != "" {
+		url := fmt.Sprintf("%s/%s/%s", strings.TrimSuffix(p.endpoint, "/"), p.bucket, key)
+		return url, nil
 	}
 	url := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", p.bucket, p.region, key)
 	return url, nil

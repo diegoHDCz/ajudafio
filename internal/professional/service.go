@@ -3,7 +3,6 @@ package professional
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -135,9 +134,9 @@ func (s *ProfessionalService) FindWithFilters(ctx context.Context, filters ports
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 func extractS3Key(rawURL string) string {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return ""
+	const marker = "avatar/"
+	if idx := strings.Index(rawURL, marker); idx != -1 {
+		return rawURL[idx:]
 	}
-	return strings.TrimPrefix(u.Path, "/")
+	return ""
 }

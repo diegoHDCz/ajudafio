@@ -82,7 +82,7 @@ func main() {
 
 	// ── Wire: user slice ──────────────────────────────────────────────────────
 	userRepo := userpostgres.NewRepository(db)
-	storage := s3provider.New(cfg.AWSAccessKeyID, cfg.AWSSecretAccessKey, cfg.AWSRegion, cfg.AWSS3BucketName)
+	storage := s3provider.New(cfg.SupabaseAccessKeyID, cfg.SupabaseSecretKey, cfg.SupabaseRegion, cfg.SupabaseBucketName, cfg.SupabaseEndpoint)
 	userSvc := user.NewService(userRepo, storage)
 
 	// ── Wire: shared validator ─────────────────────────────────────────────────
