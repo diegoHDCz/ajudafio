@@ -110,12 +110,21 @@ type Review struct {
 }
 
 type User struct {
+	ID               pgtype.UUID      `json:"id"`
+	AuthUserID       pgtype.UUID      `json:"auth_user_id"`
+	Name             string           `json:"name"`
+	Email            string           `json:"email"`
+	Phone            *string          `json:"phone"`
+	Role             string           `json:"role"`
+	OnboardingStatus string           `json:"onboarding_status"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	AvatarUrl        *string          `json:"avatar_url"`
+}
+
+type UserRole struct {
 	ID        pgtype.UUID      `json:"id"`
-	Name      string           `json:"name"`
-	Email     string           `json:"email"`
-	Phone     *string          `json:"phone"`
+	UserID    pgtype.UUID      `json:"user_id"`
 	Role      string           `json:"role"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	AvatarUrl *string          `json:"avatar_url"`
 }

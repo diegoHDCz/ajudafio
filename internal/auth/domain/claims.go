@@ -1,16 +1,13 @@
 package domain
 
-import "github.com/golang-jwt/jwt/v5"
-
-type JWTClaims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
-	Role   string `json:"role"`
-	jwt.RegisteredClaims
-}
-
-type RefreshClaims struct {
-	UserID string `json:"user_id"`
-	jwt.RegisteredClaims
+// AuthenticatedUser is the resolved identity attached to the request context
+// once a Supabase-issued JWT has been validated and matched to a local user
+// (or, for a first-time caller, matched only by AuthUserID with UserID empty —
+// see the /me provisioning flow).
+type AuthenticatedUser struct {
+	AuthUserID string // Supabase auth.users.id — the JWT `sub` claim.
+	UserID     string // Local users.id, empty until the user is provisioned.
+	Email      string
+	Name       string
+	Role       string // App RBAC role, resolved from users/user_roles — never the raw Supabase JWT claim.
 }

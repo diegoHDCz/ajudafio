@@ -1,101 +1,95 @@
 ### =========================================================================
 ### CONFIGURAÇÕES INICIAIS
 ### =========================================================================
-@keycloak_url = http://localhost:8180
-@realm = ajudafio
-@client_id = app-ajudafio
-@client_secret = INSIRA O KEY SECRETO DO CLIENT AQUI
+### Login/registro/sessão são feitos diretamente contra o Supabase Auth (ADR-005).
+### O backend Go só valida o JWT resultante — os passos 1-2 abaixo falam com o
+### Supabase, não com esta API.
 
-# COLOQUE AQUI O ID DO USUÁRIO QUE VAI RECEBER A ROLE
-@user_id = INSIRA-O-UUID-DO-USUARIO-AQUI
+@supabase_url = https://SEU-PROJETO.supabase.co
+@supabase_anon_key = INSIRA-A-ANON-KEY-AQUI
+@api_url = http://localhost:8080
 
-
-
-### =========================================================================
-### PASSO 1: AUTENTICAR (OBTER O TOKEN DE ADMIN)
-### =========================================================================
-# Executa o login usando as credenciais do client (Service Account).
-# @name login
-POST {{keycloak_url}}/realms/{{realm}}/protocol/openid-connect/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=client_credentials
-&client_id={{client_id}}
-&client_secret={{client_secret}}
-
-### Armazena o token gerado para as próximas requisições
-@admin_token = {{login.response.body.access_token}}
+@email = teste@example.com
+@password = SenhaForte123!
 
 
 
 ### =========================================================================
-### PASSO 2: PEGAR O ID INTERNO DO CLIENT (CLIENT_INTERNAL_ID)
+### PASSO 1: CADASTRO (SUPABASE AUTH)
 ### =========================================================================
-# O Keycloak diferencia o nome do client ("app-ajudafio") do seu UUID interno. 
-# Precisamos desse UUID para gerenciar as Client Roles.
-# @name getClientInternalId
-GET {{keycloak_url}}/admin/realms/{{realm}}/clients?clientId={{client_id}}
-Authorization: Bearer {{admin_token}}
-
-### Armazena automaticamente o UUID interno do Client retornado pela busca
-@client_internal_id = {{getClientInternalId.response.body[0].id}}
-
-
-
-### =========================================================================
-### PASSO 3: CRIAR A CLIENT ROLE (SE VOCÊ AINDA NÃO CRIOU)
-### =========================================================================
-# Vamos criar uma nova role específica dentro do client "app-ajudafio".
-# Altere o "name" abaixo para o nome da role que você deseja criar.
-# @name createClientRole
-POST {{keycloak_url}}/admin/realms/{{realm}}/clients/{{client_internal_id}}/roles
-Authorization: Bearer {{admin_token}}
+# @name signup
+POST {{supabase_url}}/auth/v1/signup
+apikey: {{supabase_anon_key}}
 Content-Type: application/json
 
 {
-  "name": "caregiver-premium",
-  "description": "Acesso premium para prestadores de serviço"
+  "email": "{{email}}",
+  "password": "{{password}}"
 }
 
 
 
 ### =========================================================================
-### PASSO 4: LISTAR AS ROLES PARA CAPTURAR O ID DA ROLE CRIADA
+### PASSO 2: LOGIN (SUPABASE AUTH) — OBTER O ACCESS TOKEN
 ### =========================================================================
-# Como o Keycloak não retorna o ID no passo anterior, este GET lista todas 
-# as roles do seu client para que possamos extrair o UUID dela.
-# @name getClientRoles
-GET {{keycloak_url}}/admin/realms/{{realm}}/clients/{{client_internal_id}}/roles
-Authorization: Bearer {{admin_token}}
-
-
-
-### =========================================================================
-### PASSO 5: INSERIR A CLIENT ROLE NO USUÁRIO
-### =========================================================================
-# Agora vinculamos a role ao usuário.
-# ATENÇÃO: Vá no painel de resposta do PASSO 4 à direita, copie o "id" (UUID) 
-# da role criada e cole na variável @role_id abaixo. Substitua também o "name".
-
-@role_id = INSIRA-O-UUID-DA-ROLE-AQUI-QUE-VEIO-NO-PASSO-4
-@role_name = caregiver-premium
-
-POST {{keycloak_url}}/admin/realms/{{realm}}/users/{{user_id}}/role-mappings/clients/{{client_internal_id}}
-Authorization: Bearer {{admin_token}}
+# @name login
+POST {{supabase_url}}/auth/v1/token?grant_type=password
+apikey: {{supabase_anon_key}}
 Content-Type: application/json
 
-[
-  {
-    "id": "{{role_id}}",
-    "name": "{{role_name}}"
-  }
-]
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Armazena o access token retornado para as próximas requisições ao backend
+@access_token = {{login.response.body.access_token}}
 
 
 
 ### =========================================================================
-### PASSO 6: VALIDAR SE A ROLE FOI INSERIDA COM SUCESSO
+### PASSO 3: PRIMEIRO ACESSO — CRIA/RETORNA O USUÁRIO DA APLICAÇÃO
 ### =========================================================================
-# Lista todas as Client Roles ativas mapeadas atualmente para este usuário.
-GET {{keycloak_url}}/admin/realms/{{realm}}/users/{{user_id}}/role-mappings/clients/{{client_internal_id}}
-Authorization: Bearer {{admin_token}}
+# @name me
+GET {{api_url}}/me
+Authorization: Bearer {{access_token}}
+
+### Papéis do usuário autenticado
+GET {{api_url}}/me/roles
+Authorization: Bearer {{access_token}}
+
+### Permissões do usuário autenticado
+GET {{api_url}}/me/permissions
+Authorization: Bearer {{access_token}}
+
+
+
+### =========================================================================
+### PASSO 4: COMPLETAR PERFIL (FAMILY_CLIENT OU FINANCIAL_SPONSOR)
+### =========================================================================
+# Para HEALTH_CAREPROVIDER, use POST /professionals em vez deste endpoint —
+# o perfil de profissional já existe em internal/professional.
+POST {{api_url}}/auth/profile
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "role": "FAMILY_CLIENT"
+}
+
+
+
+### =========================================================================
+### PASSO 5: ONBOARDING
+### =========================================================================
+POST {{api_url}}/onboarding
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### Status atual de onboarding
+GET {{api_url}}/onboarding/status
+Authorization: Bearer {{access_token}}

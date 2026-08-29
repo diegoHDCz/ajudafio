@@ -97,7 +97,7 @@ func (h *ProfessionalHandler) Create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	err = h.userSvc.UpdateUserRole(r.Context(), body.UserID, usrDomain.RoleProfessional)
+	err = h.userSvc.UpdateUserRole(r.Context(), body.UserID, usrDomain.RoleHealthCareprovider)
 	if err != nil {
 		http.Error(w, "failed to update user role", http.StatusInternalServerError)
 		return
@@ -195,7 +195,7 @@ func (h *ProfessionalHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.userSvc.UpdateUserRole(r.Context(), p.UserID, usrDomain.RoleClient)
+	err = h.userSvc.UpdateUserRole(r.Context(), p.UserID, usrDomain.RoleFamilyClient)
 	if err != nil {
 		http.Error(w, "failed to update user role", http.StatusInternalServerError)
 		return

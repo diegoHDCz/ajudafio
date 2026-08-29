@@ -50,6 +50,14 @@ func (s *service) GetByEmail(ctx context.Context, email string) (*domain.User, e
 	return user, nil
 }
 
+func (s *service) GetByAuthUserID(ctx context.Context, authUserID string) (*domain.User, error) {
+	user, err := s.repo.GetByAuthUserID(ctx, authUserID)
+	if err != nil {
+		return nil, fmt.Errorf("user.GetByAuthUserID: %w", err)
+	}
+	return user, nil
+}
+
 func (s *service) Create(ctx context.Context, input ports.CreateUserInput) (*domain.User, error) {
 	user := &domain.User{
 		ID:    uuid.New().String(),
@@ -103,7 +111,43 @@ func (s *service) UpdateUserRole(ctx context.Context, id string, role domain.Rol
 	if err := s.repo.UpdateUserRole(ctx, id, role); err != nil {
 		return fmt.Errorf("user.UpdateUserRole: %w", err)
 	}
+	if err := s.repo.AddRole(ctx, id, role); err != nil {
+		return fmt.Errorf("user.UpdateUserRole: %w", err)
+	}
 	return nil
+}
+
+func (s *service) EnsureProvisioned(ctx context.Context, input ports.ProvisionUserInput) (*domain.User, error) {
+	name := input.Name
+	if name == "" {
+		name = input.Email
+	}
+
+	user, err := s.repo.FindOrCreateByAuthUserID(ctx, input.AuthUserID, input.Email, name, domain.RoleFamilyClient)
+	if err != nil {
+		return nil, fmt.Errorf("user.EnsureProvisioned: %w", err)
+	}
+
+	if err := s.repo.AddRole(ctx, user.ID, user.Role); err != nil {
+		return nil, fmt.Errorf("user.EnsureProvisioned: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *service) UpdateOnboardingStatus(ctx context.Context, userID string, status domain.OnboardingStatus) (*domain.User, error) {
+	if err := s.repo.UpdateOnboardingStatus(ctx, userID, status); err != nil {
+		return nil, fmt.Errorf("user.UpdateOnboardingStatus: %w", err)
+	}
+	return s.GetByID(ctx, userID)
+}
+
+func (s *service) ListRoles(ctx context.Context, userID string) ([]domain.Role, error) {
+	roles, err := s.repo.ListRoles(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user.ListRoles: %w", err)
+	}
+	return roles, nil
 }
 
 func (s *service) UploadAvatar(ctx context.Context, userID string, fileData []byte, contentType string) (*domain.User, error) {

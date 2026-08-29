@@ -20,12 +20,12 @@ import (
 // --- Mock ---
 
 type mockUserSvc struct {
-	getByID        func(context.Context, string) (*domain.User, error)
-	getByEmail     func(context.Context, string) (*domain.User, error)
-	create         func(context.Context, ports.CreateUserInput) (*domain.User, error)
-	update         func(context.Context, ports.UpdateUserInput) (*domain.User, error)
-	deleteFn       func(context.Context, string) error
-	updateRoleFn   func(context.Context, string, domain.Role) error
+	getByID      func(context.Context, string) (*domain.User, error)
+	getByEmail   func(context.Context, string) (*domain.User, error)
+	create       func(context.Context, ports.CreateUserInput) (*domain.User, error)
+	update       func(context.Context, ports.UpdateUserInput) (*domain.User, error)
+	deleteFn     func(context.Context, string) error
+	updateRoleFn func(context.Context, string, domain.Role) error
 }
 
 func (m *mockUserSvc) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -52,55 +52,30 @@ func (m *mockUserSvc) UpdateUserRole(ctx context.Context, id string, role domain
 func (m *mockUserSvc) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*domain.User, error) {
 	return nil, nil
 }
+func (m *mockUserSvc) GetByAuthUserID(_ context.Context, _ string) (*domain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserSvc) EnsureProvisioned(_ context.Context, _ ports.ProvisionUserInput) (*domain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserSvc) UpdateOnboardingStatus(_ context.Context, _ string, _ domain.OnboardingStatus) (*domain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserSvc) ListRoles(_ context.Context, _ string) ([]domain.Role, error) {
+	return nil, errors.New("not implemented")
+}
 
 func makeTestUser() *domain.User {
 	return &domain.User{
 		ID:    "user-1",
 		Name:  "Alice",
 		Email: "alice@example.com",
-		Role:  domain.RoleClient,
+		Role:  domain.RoleFamilyClient,
 	}
 }
 
 func newUserRouter(svc ports.UserService) http.Handler {
 	return userhttp.NewRouter(userhttp.NewHandler(svc, shared.NewValidator(svc)))
-}
-
-// --- Me ---
-
-func TestUserMe_WithClaims(t *testing.T) {
-	claims := &authdomain.JWTClaims{Name: "Alice", Email: "alice@example.com"}
-	router := newUserRouter(&mockUserSvc{})
-
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), claims))
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusOK)
-	}
-	var resp struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if resp.Name != claims.Name || resp.Email != claims.Email {
-		t.Errorf("response mismatch: got %+v, want {Name:%s Email:%s}", resp, claims.Name, claims.Email)
-	}
-}
-
-func TestUserMe_NoClaims(t *testing.T) {
-	router := newUserRouter(&mockUserSvc{})
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("status: got %d, want %d", rec.Code, http.StatusUnauthorized)
-	}
 }
 
 // --- GetByID ---
@@ -270,8 +245,8 @@ func TestUserUpdate_Success(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/"+string(user.ID), bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "ADMIN",
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.AuthenticatedUser{
+		Role: "PLATFORM_ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -285,8 +260,8 @@ func TestUserUpdate_InvalidJSON(t *testing.T) {
 	router := newUserRouter(&mockUserSvc{})
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewBufferString("not-json"))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "ADMIN",
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.AuthenticatedUser{
+		Role: "PLATFORM_ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -306,8 +281,8 @@ func TestUserUpdate_ServiceError(t *testing.T) {
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodPatch, "/user-1", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "ADMIN",
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.AuthenticatedUser{
+		Role: "PLATFORM_ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -341,8 +316,8 @@ func TestUserDelete_Success(t *testing.T) {
 	}
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "ADMIN",
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.AuthenticatedUser{
+		Role: "PLATFORM_ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -360,8 +335,8 @@ func TestUserDelete_ServiceError(t *testing.T) {
 	}
 	router := newUserRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/user-1", nil)
-	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.JWTClaims{
-		Role: "ADMIN",
+	req = req.WithContext(authmiddleware.WithClaims(req.Context(), &authdomain.AuthenticatedUser{
+		Role: "PLATFORM_ADMIN",
 	}))
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)

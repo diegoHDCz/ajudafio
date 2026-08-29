@@ -25,38 +25,11 @@ func NewHandler(svc ports.UserService, validator *shared.Validator) *Handler {
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Post("/", h.Create)
-	r.Get("/me", h.Me)
 	r.Get("/{id}", h.GetByID)
 	r.Patch("/{id}", h.Update)
 	r.Patch("/{id}/avatar", h.UploadAvatar)
 	r.Delete("/{id}", h.Delete)
 	return r
-}
-
-// @Summary      Dados do usuário autenticado
-// @Tags         users
-// @Produce      json
-// @Success      200  {object}  meResponse
-// @Failure      401  {string}  string
-// @Security     BearerAuth
-// @Router       /users/me [get]
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	claims := authmiddleware.GetClaims(r.Context())
-	user, err := h.svc.GetByEmail(r.Context(), claims.Email)
-	if err != nil {
-		http.Error(w, "user not found", http.StatusNotFound)
-		return
-	}
-	if claims == nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	respond(w, http.StatusOK, meResponse{
-		Name:  claims.Name,
-		Email: claims.Email,
-		ID:    user.ID,
-		Role:  user.Role,
-	})
 }
 
 // @Summary      Buscar usuário por ID
@@ -112,7 +85,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Email: email,
 		Name:  body.Name,
 		Phone: body.Phone,
-		Role:  derefRole(body.Role, domain.RoleClient),
+		Role:  derefRole(body.Role, domain.RoleFamilyClient),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
