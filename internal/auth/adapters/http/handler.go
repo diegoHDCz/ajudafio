@@ -2,198 +2,238 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
-	"github.com/diegoHDCz/ajudafio/internal/auth"
-	"github.com/diegoHDCz/ajudafio/internal/auth/ports"
-	"github.com/diegoHDCz/ajudafio/internal/shared"
+	auditdomain "github.com/diegoHDCz/ajudafio/internal/audit/domain"
+	auditports "github.com/diegoHDCz/ajudafio/internal/audit/ports"
+	"github.com/diegoHDCz/ajudafio/internal/auth/middleware"
+	"github.com/diegoHDCz/ajudafio/internal/auth/rbac"
+	profileports "github.com/diegoHDCz/ajudafio/internal/profile/ports"
+	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
+	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
 	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
-	svc ports.AuthService
+	userSvc    userports.UserService
+	profileSvc profileports.ProfileService
+	auditSvc   auditports.AuditService
 }
 
-func NewHandler(svc ports.AuthService) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(userSvc userports.UserService, profileSvc profileports.ProfileService, auditSvc auditports.AuditService) *Handler {
+	return &Handler{userSvc: userSvc, profileSvc: profileSvc, auditSvc: auditSvc}
 }
 
+// NewRouter mounts the endpoints still owned by this module now that
+// Supabase Auth handles login/registration directly with the client (see
+// ADR-005). Everything under /me and /onboarding is wired at the top level in
+// cmd/main.go, matching the flat paths in docs/feat/refactor-auth.md §32.
 func NewRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
-	r.Post("/register", h.Register)
-	r.Post("/login", h.Login)
-	r.Post("/refresh", h.Refresh)
-	r.Post("/logout", h.Logout)
-	r.Post("/google", h.GoogleLogin)
+	r.Post("/profile", h.CompleteProfile)
 	return r
 }
 
-// @Summary      Registrar novo usuário
+// @Summary      Dados do usuário autenticado (cria o usuário de aplicação no primeiro acesso)
 // @Tags         auth
-// @Accept       json
 // @Produce      json
-// @Param        body  body      registerRequest  true  "Dados de cadastro"
-// @Success      201   {object}  tokenResponse
-// @Failure      400   {string}  string
-// @Failure      409   {string}  string
-// @Router       /auth/register [post]
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var body registerRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return
-	}
-	if body.Name == "" || body.Email == "" || body.Password == "" {
-		http.Error(w, "name, email and password are required", http.StatusBadRequest)
+// @Success      200  {object}  meResponse
+// @Failure      401  {string}  string
+// @Security     BearerAuth
+// @Router       /me [get]
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	email, err := shared.NormalizeEmail(body.Email)
-	if err != nil {
-		http.Error(w, "invalid email", http.StatusBadRequest)
-		return
-	}
-
-	pair, err := h.svc.Register(r.Context(), ports.RegisterInput{
-		Name:     body.Name,
-		Email:    email,
-		Phone:    body.Phone,
-		Password: body.Password,
-	})
-	if err != nil {
-		if errors.Is(err, auth.ErrEmailAlreadyInUse) {
-			http.Error(w, err.Error(), http.StatusConflict)
+	if claims.UserID != "" {
+		user, err := h.userSvc.GetByID(r.Context(), claims.UserID)
+		if err != nil {
+			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respond(w, http.StatusOK, toMeResponse(user))
 		return
 	}
 
-	respond(w, http.StatusCreated, toTokenResponse(pair))
+	// First access (feat doc §24): an authenticated Supabase identity with no
+	// application user yet — provision one instead of 404ing.
+	user, err := h.userSvc.EnsureProvisioned(r.Context(), userports.ProvisionUserInput{
+		AuthUserID: claims.AuthUserID,
+		Email:      claims.Email,
+		Name:       claims.Email,
+	})
+	if err != nil {
+		http.Error(w, "failed to provision user", http.StatusInternalServerError)
+		return
+	}
+	h.auditSvc.Log(r.Context(), &user.ID, auditdomain.ActionUserRegistered, map[string]any{"auth_user_id": claims.AuthUserID})
+
+	respond(w, http.StatusOK, toMeResponse(user))
 }
 
-// @Summary      Login
+// @Summary      Papéis do usuário autenticado
 // @Tags         auth
-// @Accept       json
 // @Produce      json
-// @Param        body  body      loginRequest  true  "Credenciais"
-// @Success      200   {object}  tokenResponse
-// @Failure      400   {string}  string
-// @Failure      401   {string}  string
-// @Router       /auth/login [post]
-func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	var body loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return
-	}
-	if body.Email == "" || body.Password == "" {
-		http.Error(w, "email and password are required", http.StatusBadRequest)
+// @Success      200  {object}  rolesResponse
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Security     BearerAuth
+// @Router       /me/roles [get]
+func (h *Handler) MeRoles(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil || claims.UserID == "" {
+		http.Error(w, "user not initialized", http.StatusForbidden)
 		return
 	}
 
-	email, err := shared.NormalizeEmail(body.Email)
+	roles, err := h.userSvc.ListRoles(r.Context(), claims.UserID)
 	if err != nil {
-		http.Error(w, "invalid email", http.StatusBadRequest)
+		http.Error(w, "failed to load roles", http.StatusInternalServerError)
 		return
 	}
 
-	pair, err := h.svc.Login(r.Context(), email, body.Password)
-	if err != nil {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	respond(w, http.StatusOK, toTokenResponse(pair))
+	respond(w, http.StatusOK, rolesResponse{Roles: rolesToStrings(roles)})
 }
 
-// @Summary      Renovar access token
+// @Summary      Permissões do usuário autenticado
 // @Tags         auth
-// @Accept       json
 // @Produce      json
-// @Param        body  body      refreshRequest  true  "Refresh token"
-// @Success      200   {object}  tokenResponse
-// @Failure      400   {string}  string
-// @Failure      401   {string}  string
-// @Router       /auth/refresh [post]
-func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var body refreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return
-	}
-	if body.RefreshToken == "" {
-		http.Error(w, "refresh_token is required", http.StatusBadRequest)
+// @Success      200  {object}  permissionsResponse
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Security     BearerAuth
+// @Router       /me/permissions [get]
+func (h *Handler) MePermissions(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil || claims.UserID == "" {
+		http.Error(w, "user not initialized", http.StatusForbidden)
 		return
 	}
 
-	pair, err := h.svc.Refresh(r.Context(), body.RefreshToken)
+	roles, err := h.userSvc.ListRoles(r.Context(), claims.UserID)
 	if err != nil {
-		http.Error(w, "invalid or expired refresh token", http.StatusUnauthorized)
+		http.Error(w, "failed to load roles", http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, toTokenResponse(pair))
+	perms := rbac.PermissionsForRoles(rolesToStrings(roles))
+	permStrings := make([]string, len(perms))
+	for i, p := range perms {
+		permStrings[i] = string(p)
+	}
+
+	respond(w, http.StatusOK, permissionsResponse{Permissions: permStrings})
 }
 
-// @Summary      Logout
+// @Summary      Completar perfil (FAMILY_CLIENT ou FINANCIAL_SPONSOR)
 // @Tags         auth
 // @Accept       json
-// @Param        body  body  logoutRequest  true  "Refresh token"
+// @Param        body  body  completeProfileRequest  true  "Papel escolhido"
 // @Success      204
 // @Failure      400  {string}  string
-// @Router       /auth/logout [post]
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	var body logoutRequest
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Security     BearerAuth
+// @Router       /auth/profile [post]
+func (h *Handler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil || claims.UserID == "" {
+		http.Error(w, "user not initialized", http.StatusForbidden)
+		return
+	}
+
+	var body completeProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if body.RefreshToken == "" {
-		http.Error(w, "refresh_token is required", http.StatusBadRequest)
+
+	switch userdomain.Role(body.Role) {
+	case userdomain.RoleFamilyClient:
+		if _, err := h.profileSvc.CreateFamilyProfile(r.Context(), claims.UserID); err != nil {
+			http.Error(w, "failed to create profile", http.StatusInternalServerError)
+			return
+		}
+	case userdomain.RoleFinancialSponsor:
+		if _, err := h.profileSvc.CreateFinancialProfile(r.Context(), claims.UserID); err != nil {
+			http.Error(w, "failed to create profile", http.StatusInternalServerError)
+			return
+		}
+	case userdomain.RoleHealthCareprovider:
+		http.Error(w, "use POST /professionals to create a health care provider profile", http.StatusBadRequest)
+		return
+	default:
+		http.Error(w, "invalid role", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.svc.Logout(r.Context(), body.RefreshToken); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := h.userSvc.UpdateUserRole(r.Context(), claims.UserID, userdomain.Role(body.Role)); err != nil {
+		http.Error(w, "failed to update role", http.StatusInternalServerError)
 		return
 	}
+	h.auditSvc.Log(r.Context(), &claims.UserID, auditdomain.ActionRoleAssigned, map[string]any{"role": body.Role})
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// @Summary      Login/cadastro com Google
+// @Summary      Atualizar status de onboarding
 // @Tags         auth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      googleLoginRequest  true  "ID token do Google Identity Services"
-// @Success      200   {object}  tokenResponse
+// @Param        body  body      onboardingStatusRequest  true  "Novo status"
+// @Success      200   {object}  onboardingStatusResponse
 // @Failure      400   {string}  string
 // @Failure      401   {string}  string
-// @Router       /auth/google [post]
-func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	var body googleLoginRequest
+// @Failure      403   {string}  string
+// @Security     BearerAuth
+// @Router       /onboarding [post]
+func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil || claims.UserID == "" {
+		http.Error(w, "user not initialized", http.StatusForbidden)
+		return
+	}
+
+	var body onboardingStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
 		return
 	}
-	if body.IDToken == "" {
-		http.Error(w, "id_token is required", http.StatusBadRequest)
-		return
-	}
 
-	pair, err := h.svc.GoogleLogin(r.Context(), body.IDToken)
+	user, err := h.userSvc.UpdateOnboardingStatus(r.Context(), claims.UserID, userdomain.OnboardingStatus(body.Status))
 	if err != nil {
-		if errors.Is(err, auth.ErrGoogleEmailUnverified) {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
-		}
-		http.Error(w, "invalid google id token", http.StatusUnauthorized)
+		http.Error(w, "failed to update onboarding status", http.StatusInternalServerError)
 		return
 	}
 
-	respond(w, http.StatusOK, toTokenResponse(pair))
+	respond(w, http.StatusOK, onboardingStatusResponse{Status: string(user.OnboardingStatus)})
+}
+
+// @Summary      Status de onboarding do usuário autenticado
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  onboardingStatusResponse
+// @Failure      401  {string}  string
+// @Failure      403  {string}  string
+// @Security     BearerAuth
+// @Router       /onboarding/status [get]
+func (h *Handler) OnboardingStatus(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.GetClaims(r.Context())
+	if claims == nil || claims.UserID == "" {
+		http.Error(w, "user not initialized", http.StatusForbidden)
+		return
+	}
+
+	user, err := h.userSvc.GetByID(r.Context(), claims.UserID)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	respond(w, http.StatusOK, onboardingStatusResponse{Status: string(user.OnboardingStatus)})
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -202,4 +242,12 @@ func respond(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(body)
+}
+
+func rolesToStrings(roles []userdomain.Role) []string {
+	out := make([]string, len(roles))
+	for i, r := range roles {
+		out[i] = string(r)
+	}
+	return out
 }

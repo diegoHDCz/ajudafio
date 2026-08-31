@@ -9,11 +9,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	avail "github.com/diegoHDCz/ajudafio/internal/availability"
 	availhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/availability/domain"
-	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
-	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	profdomain "github.com/diegoHDCz/ajudafio/internal/professional/domain"
 	profports "github.com/diegoHDCz/ajudafio/internal/professional/ports"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
@@ -113,6 +113,18 @@ func (s *stubUserSvcAvail) UpdateUserRole(_ context.Context, _ string, _ userdom
 func (s *stubUserSvcAvail) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
+func (s *stubUserSvcAvail) GetByAuthUserID(_ context.Context, _ string) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) EnsureProvisioned(_ context.Context, _ userports.ProvisionUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) UpdateOnboardingStatus(_ context.Context, _ string, _ userdomain.OnboardingStatus) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAvail) ListRoles(_ context.Context, _ string) ([]userdomain.Role, error) {
+	return nil, errors.New("not implemented")
+}
 
 func ptrShift(s shared.Shift) *shared.Shift { return &s }
 
@@ -125,8 +137,8 @@ func makeTestAvailability() *domain.Availability {
 	}
 }
 
-func adminClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{Role: "ADMIN"}
+func adminClaims() *authdomain.AuthenticatedUser {
+	return &authdomain.AuthenticatedUser{Role: "PLATFORM_ADMIN"}
 }
 
 func newAvailRouter(repo *stubAvailRepo) http.Handler {
@@ -140,8 +152,8 @@ func newAvailRouterFull(repo *stubAvailRepo, profSvc *stubProfSvc, userSvc *stub
 	return availhttp.NewAvailabilityRouter(h)
 }
 
-func ownerClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{Email: "owner@test.com"}
+func ownerClaims() *authdomain.AuthenticatedUser {
+	return &authdomain.AuthenticatedUser{Email: "owner@test.com"}
 }
 
 // --- GetByProfessionalID ---

@@ -1,43 +1,41 @@
 package http
 
-import authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
+import userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
 
-type registerRequest struct {
-	Name     string  `json:"name"`
-	Email    string  `json:"email"`
-	Phone    *string `json:"phone"`
-	Password string  `json:"password"`
+type meResponse struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Email            string `json:"email"`
+	Role             string `json:"role"`
+	OnboardingStatus string `json:"onboarding_status"`
 }
 
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type refreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-type logoutRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-type googleLoginRequest struct {
-	IDToken string `json:"id_token"`
-}
-
-type tokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	TokenType    string `json:"token_type"`
-}
-
-func toTokenResponse(pair *authdomain.TokenPair) tokenResponse {
-	return tokenResponse{
-		AccessToken:  pair.AccessToken,
-		RefreshToken: pair.RefreshToken,
-		ExpiresIn:    pair.ExpiresIn,
-		TokenType:    "Bearer",
+func toMeResponse(u *userdomain.User) meResponse {
+	return meResponse{
+		ID:               u.ID,
+		Name:             u.Name,
+		Email:            u.Email,
+		Role:             string(u.Role),
+		OnboardingStatus: string(u.OnboardingStatus),
 	}
+}
+
+type rolesResponse struct {
+	Roles []string `json:"roles"`
+}
+
+type permissionsResponse struct {
+	Permissions []string `json:"permissions"`
+}
+
+type completeProfileRequest struct {
+	Role string `json:"role"`
+}
+
+type onboardingStatusRequest struct {
+	Status string `json:"status"`
+}
+
+type onboardingStatusResponse struct {
+	Status string `json:"status"`
 }

@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
-	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	addrhttp "github.com/diegoHDCz/ajudafio/internal/address/adapters/http"
 	"github.com/diegoHDCz/ajudafio/internal/address/domain"
 	"github.com/diegoHDCz/ajudafio/internal/address/ports"
+	authdomain "github.com/diegoHDCz/ajudafio/internal/auth/domain"
+	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
 	"github.com/diegoHDCz/ajudafio/internal/shared"
 	userdomain "github.com/diegoHDCz/ajudafio/internal/user/domain"
 	userports "github.com/diegoHDCz/ajudafio/internal/user/ports"
@@ -90,14 +90,26 @@ func (s *stubUserSvcAddr) UpdateUserRole(_ context.Context, _ string, _ userdoma
 func (s *stubUserSvcAddr) UploadAvatar(_ context.Context, _ string, _ []byte, _ string) (*userdomain.User, error) {
 	return nil, errors.New("not implemented")
 }
+func (s *stubUserSvcAddr) GetByAuthUserID(_ context.Context, _ string) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) EnsureProvisioned(_ context.Context, _ userports.ProvisionUserInput) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) UpdateOnboardingStatus(_ context.Context, _ string, _ userdomain.OnboardingStatus) (*userdomain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (s *stubUserSvcAddr) ListRoles(_ context.Context, _ string) ([]userdomain.Role, error) {
+	return nil, errors.New("not implemented")
+}
 
 func newAddrRouter(svc ports.AddressService) http.Handler {
 	validator := shared.NewValidator(&stubUserSvcAddr{})
 	return addrhttp.NewRouter(addrhttp.NewAddressHandler(svc, validator))
 }
 
-func adminClaims() *authdomain.JWTClaims {
-	return &authdomain.JWTClaims{Role: "ADMIN"}
+func adminClaims() *authdomain.AuthenticatedUser {
+	return &authdomain.AuthenticatedUser{Role: "PLATFORM_ADMIN"}
 }
 
 // --- GetByID ---
@@ -380,7 +392,7 @@ func TestAddrDelete_NotOwner(t *testing.T) {
 		getByID: func(_ context.Context, _ string) (*domain.Address, error) { return a, nil },
 	}
 	// stubUserSvcAddr.getByEmail returns error → ValidateSameUserID returns false → 403
-	claims := &authdomain.JWTClaims{Email: "other@example.com"}
+	claims := &authdomain.AuthenticatedUser{Email: "other@example.com"}
 	router := newAddrRouter(svc)
 	req := httptest.NewRequest(http.MethodDelete, "/"+a.ID, nil)
 	req = req.WithContext(authmiddleware.WithClaims(req.Context(), claims))

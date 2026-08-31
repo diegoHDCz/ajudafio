@@ -9,11 +9,19 @@ import (
 type UserService interface {
 	GetByID(ctx context.Context, id string) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetByAuthUserID(ctx context.Context, authUserID string) (*domain.User, error)
 	Create(ctx context.Context, input CreateUserInput) (*domain.User, error)
 	Update(ctx context.Context, input UpdateUserInput) (*domain.User, error)
 	Delete(ctx context.Context, id string) error
 	UpdateUserRole(ctx context.Context, id string, role domain.Role) error
 	UploadAvatar(ctx context.Context, userID string, fileData []byte, contentType string) (*domain.User, error)
+
+	// EnsureProvisioned resolves the local user for an authenticated Supabase
+	// identity, creating (or email-linking) one on first access. See feat doc
+	// §24 "Primeiro acesso".
+	EnsureProvisioned(ctx context.Context, input ProvisionUserInput) (*domain.User, error)
+	UpdateOnboardingStatus(ctx context.Context, userID string, status domain.OnboardingStatus) (*domain.User, error)
+	ListRoles(ctx context.Context, userID string) ([]domain.Role, error)
 }
 
 type CreateUserInput struct {
@@ -30,4 +38,10 @@ type UpdateUserInput struct {
 	Name  *string
 	Phone *string
 	Role  *domain.Role
+}
+
+type ProvisionUserInput struct {
+	AuthUserID string
+	Email      string
+	Name       string
 }

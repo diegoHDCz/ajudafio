@@ -1,4 +1,4 @@
-﻿package user
+package user
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 
 // mockUserRepo implements ports.UserRepository for testing.
 type mockUserRepo struct {
-	getByID        func(context.Context, string) (*domain.User, error)
-	getByEmail     func(context.Context, string) (*domain.User, error)
-	create         func(context.Context, *domain.User) (*domain.User, error)
-	update         func(context.Context, *domain.User) (*domain.User, error)
-	delete         func(context.Context, string) error
-	updateRoleFn   func(context.Context, string, domain.Role) error
+	getByID      func(context.Context, string) (*domain.User, error)
+	getByEmail   func(context.Context, string) (*domain.User, error)
+	create       func(context.Context, *domain.User) (*domain.User, error)
+	update       func(context.Context, *domain.User) (*domain.User, error)
+	delete       func(context.Context, string) error
+	updateRoleFn func(context.Context, string, domain.Role) error
 }
 
 func (m *mockUserRepo) GetByID(ctx context.Context, id string) (*domain.User, error) {
@@ -43,12 +43,26 @@ func (m *mockUserRepo) UpdateUserRole(ctx context.Context, id string, role domai
 func (m *mockUserRepo) UpdateAvatar(_ context.Context, _ string, _ *string) (*domain.User, error) {
 	return nil, nil
 }
-
+func (m *mockUserRepo) GetByAuthUserID(_ context.Context, _ string) (*domain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserRepo) FindOrCreateByAuthUserID(_ context.Context, _, _, _ string, _ domain.Role) (*domain.User, error) {
+	return nil, errors.New("not implemented")
+}
+func (m *mockUserRepo) UpdateOnboardingStatus(_ context.Context, _ string, _ domain.OnboardingStatus) error {
+	return nil
+}
+func (m *mockUserRepo) ListRoles(_ context.Context, _ string) ([]domain.Role, error) {
+	return nil, nil
+}
+func (m *mockUserRepo) AddRole(_ context.Context, _ string, _ domain.Role) error {
+	return nil
+}
 
 func newTestService(repo ports.UserRepository) ports.UserService {
 	return NewService(repo, nil)
 }
-func ptrString(s string) *string { return &s }
+func ptrString(s string) *string         { return &s }
 func ptrRole(r domain.Role) *domain.Role { return &r }
 
 func makeUser() *domain.User {
@@ -56,7 +70,7 @@ func makeUser() *domain.User {
 		ID:    "user-1",
 		Name:  "Alice",
 		Email: "alice@example.com",
-		Role:  domain.RoleClient,
+		Role:  domain.RoleFamilyClient,
 	}
 }
 
@@ -141,7 +155,7 @@ func TestCreate_Success(t *testing.T) {
 	input := ports.CreateUserInput{
 		Email: "bob@example.com",
 		Name:  "Bob",
-		Role:  domain.RoleProfessional,
+		Role:  domain.RoleHealthCareprovider,
 	}
 	want := &domain.User{ID: "new-id", Email: input.Email, Name: input.Name, Role: input.Role}
 
@@ -171,7 +185,7 @@ func TestCreate_RepoError(t *testing.T) {
 		},
 	})
 
-	_, err := svc.Create(context.Background(), ports.CreateUserInput{Name: "X", Email: "x@x.com", Role: domain.RoleClient})
+	_, err := svc.Create(context.Background(), ports.CreateUserInput{Name: "X", Email: "x@x.com", Role: domain.RoleFamilyClient})
 	if !errors.Is(err, repoErr) {
 		t.Errorf("expected repoErr, got: %v", err)
 	}
@@ -184,7 +198,7 @@ func TestUpdate_AllFields(t *testing.T) {
 	newName := "Alice Updated"
 	newEmail := "new@example.com"
 	newPhone := "123456"
-	newRole := domain.RoleAdmin
+	newRole := domain.RolePlatformAdmin
 
 	input := ports.UpdateUserInput{
 		ID:    existing.ID,
@@ -305,5 +319,3 @@ func TestDelete_RepoError(t *testing.T) {
 		t.Errorf("expected repoErr, got: %v", err)
 	}
 }
-
-

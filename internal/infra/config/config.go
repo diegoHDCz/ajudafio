@@ -9,15 +9,16 @@ import (
 )
 
 type Config struct {
-	AppPort              string
-	DatabaseURL          string
-	JWTSecret            string
-	SupabaseAccessKeyID  string
-	SupabaseSecretKey    string
-	SupabaseRegion       string
-	SupabaseBucketName   string
-	SupabaseEndpoint     string
-	GoogleClientID       string
+	AppPort             string
+	DatabaseURL         string
+	SupabaseAccessKeyID string
+	SupabaseSecretKey   string
+	SupabaseRegion      string
+	SupabaseBucketName  string
+	SupabaseEndpoint    string
+	SupabaseJWKSURL     string
+	SupabaseJWTIssuer   string
+	SupabaseJWTAudience string
 	// MigrationsPath string
 }
 
@@ -29,13 +30,14 @@ func Load() *Config {
 	return &Config{
 		AppPort:             getEnv("APP_PORT", "8080"),
 		DatabaseURL:         mustGetEnv("DATABASE_URL"),
-		JWTSecret:           mustGetEnv("JWT_SECRET"),
 		SupabaseAccessKeyID: mustGetEnv("SUPABASE_ACCESS_KEY_ID"),
 		SupabaseSecretKey:   mustGetEnv("SUPABASE_SECRET_KEY"),
 		SupabaseRegion:      mustGetEnv("SUPABASE_REGION"),
 		SupabaseBucketName:  mustGetEnv("SUPABASE_BUCKET_NAME"),
 		SupabaseEndpoint:    mustGetEnv("SUPABASE_ENDPOINT"),
-		GoogleClientID:      getEnv("GOOGLE_CLIENT_ID", ""),
+		SupabaseJWKSURL:     mustGetEnv("SUPABASE_JWKS_URL"),
+		SupabaseJWTIssuer:   mustGetEnv("SUPABASE_JWT_ISSUER"),
+		SupabaseJWTAudience: getEnv("SUPABASE_JWT_AUDIENCE", "authenticated"),
 		// MigrationsPath: getEnv("MIGRATIONS_PATH", "./migrations"),
 	}
 }

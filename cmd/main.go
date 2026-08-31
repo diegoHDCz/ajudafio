@@ -26,11 +26,10 @@ import (
 	appointment "github.com/diegoHDCz/ajudafio/internal/appointment"
 	appointmenthttp "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/http"
 	appointmentpostgres "github.com/diegoHDCz/ajudafio/internal/appointment/adapters/postgres"
-	authsvc "github.com/diegoHDCz/ajudafio/internal/auth"
+	audit "github.com/diegoHDCz/ajudafio/internal/audit"
+	auditpostgres "github.com/diegoHDCz/ajudafio/internal/audit/adapters/postgres"
 	authhttp "github.com/diegoHDCz/ajudafio/internal/auth/adapters/http"
-	authpostgres "github.com/diegoHDCz/ajudafio/internal/auth/adapters/postgres"
 	authmiddleware "github.com/diegoHDCz/ajudafio/internal/auth/middleware"
-	authports "github.com/diegoHDCz/ajudafio/internal/auth/ports"
 	availability "github.com/diegoHDCz/ajudafio/internal/availability"
 	availabilityhttp "github.com/diegoHDCz/ajudafio/internal/availability/adapters/http"
 	avalabilityRepo "github.com/diegoHDCz/ajudafio/internal/availability/adapters/postgres"
@@ -43,10 +42,14 @@ import (
 	professional "github.com/diegoHDCz/ajudafio/internal/professional"
 	professionalhttp "github.com/diegoHDCz/ajudafio/internal/professional/adapters/http"
 	professionalpostgres "github.com/diegoHDCz/ajudafio/internal/professional/adapters/postgres"
+	profile "github.com/diegoHDCz/ajudafio/internal/profile"
+	profilepostgres "github.com/diegoHDCz/ajudafio/internal/profile/adapters/postgres"
 	s3provider "github.com/diegoHDCz/ajudafio/internal/storage/s3"
 	user "github.com/diegoHDCz/ajudafio/internal/user"
 	userhttp "github.com/diegoHDCz/ajudafio/internal/user/adapters/http"
 	userpostgres "github.com/diegoHDCz/ajudafio/internal/user/adapters/postgres"
+
+	"github.com/MicahParks/keyfunc/v3"
 )
 
 // @title			Ajudafio API
@@ -58,7 +61,7 @@ import (
 // @securityDefinitions.apikey	BearerAuth
 // @in							header
 // @name						Authorization
-// @description				JWT token no formato: Bearer {token}
+// @description				JWT do Supabase Auth no formato: Bearer {token}
 func main() {
 
 	// ── Config ────────────────────────────────────────────────────────────────
@@ -90,24 +93,26 @@ func main() {
 
 	userHandler := userhttp.NewHandler(userSvc, validator)
 
+	// ── Wire: profile slice (family/financial — HEALTH_CAREPROVIDER reuses internal/professional) ──
+	profileRepo := profilepostgres.NewRepository(db)
+	profileSvc := profile.NewService(profileRepo)
+
+	// ── Wire: audit slice ─────────────────────────────────────────────────────
+	auditRepo := auditpostgres.NewRepository(db)
+	auditSvc := audit.NewService(auditRepo)
+
 	// ── Wire: auth slice ──────────────────────────────────────────────────────
-	jwtSecret := []byte(cfg.JWTSecret)
-	authRepo := authpostgres.NewRepository(db)
-	googleVerifier := authsvc.NewGoogleTokenVerifier(cfg.GoogleClientID)
-	authSvc := authsvc.NewService(authRepo, userSvc, jwtSecret, googleVerifier)
-	authHandler := authhttp.NewHandler(authSvc)
+	authHandler := authhttp.NewHandler(userSvc, profileSvc, auditSvc)
 
-	// ── Background: purge refresh tokens 24h past expiry ─────────────────────
-	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
-	defer cleanupCancel()
-	go runExpiredRefreshTokenCleanup(cleanupCtx, authRepo)
-
-	// ── Wire: middleware request ──────────────────────────────────────────────────────
-	authMW, err := authmiddleware.NewAuthMiddleware(jwtSecret)
+	// ── Wire: middleware request — validates Supabase-issued JWTs via JWKS (ADR-005) ──
+	jwksCtx, jwksCancel := context.WithCancel(context.Background())
+	defer jwksCancel()
+	jwks, err := keyfunc.NewDefaultCtx(jwksCtx, []string{cfg.SupabaseJWKSURL})
 	if err != nil {
-		slog.Error("failed to initialize auth middleware", "error", err)
+		slog.Error("failed to initialize JWKS client", "error", err)
 		os.Exit(1)
 	}
+	authMW := authmiddleware.NewAuthMiddleware(jwks, cfg.SupabaseJWTIssuer, cfg.SupabaseJWTAudience, userSvc)
 
 	// ── Wire: professional slice ────────────────────────────────────────────────────────────────
 	professionalRepo := professionalpostgres.NewRepository(db)
@@ -177,13 +182,24 @@ func main() {
 		})
 	})
 
+	// Login/registration/session are handled entirely by the Supabase Auth
+	// SDK on the client (ADR-005) — the backend only validates the resulting
+	// JWT (authMW) and owns identity/authorization-adjacent endpoints below.
 	r.Mount("/auth", authhttp.NewRouter(authHandler))
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMW.RequestAuth)
+		r.Get("/me", authHandler.Me)
+		r.Get("/me/roles", authHandler.MeRoles)
+		r.Get("/me/permissions", authHandler.MePermissions)
+		r.Post("/onboarding", authHandler.UpdateOnboarding)
+		r.Get("/onboarding/status", authHandler.OnboardingStatus)
+	})
 
 	r.Route("/users", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(authMW.RequestAuth)
 			r.Post("/", userHandler.Create)
-			r.Get("/me", userHandler.Me)
 			r.Get("/{id}", userHandler.GetByID)
 			r.Patch("/{id}", userHandler.Update)
 			r.Delete("/{id}", userHandler.Delete)
@@ -234,28 +250,4 @@ func main() {
 	}
 
 	slog.Info("server exited")
-}
-
-// runExpiredRefreshTokenCleanup periodically purges refresh tokens that have
-// been expired for more than 24h, running once on startup and then hourly.
-func runExpiredRefreshTokenCleanup(ctx context.Context, repo authports.AuthRepository) {
-	purge := func() {
-		if err := repo.DeleteExpiredRefreshTokens(ctx); err != nil {
-			slog.Error("failed to purge expired refresh tokens", "error", err)
-		}
-	}
-
-	purge()
-
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			purge()
-		}
-	}
 }
