@@ -14,14 +14,16 @@ definitions:
     - Physiotherapist
   domain.Role:
     enum:
-    - CLIENT
-    - PROFESSIONAL
-    - ADMIN
+    - FAMILY_CLIENT
+    - HEALTH_CAREPROVIDER
+    - FINANCIAL_SPONSOR
+    - PLATFORM_ADMIN
     type: string
     x-enum-varnames:
-    - RoleClient
-    - RoleProfessional
-    - RoleAdmin
+    - RoleFamilyClient
+    - RoleHealthCareprovider
+    - RoleFinancialSponsor
+    - RolePlatformAdmin
   http.addressResponse:
     properties:
       address_line:
@@ -137,6 +139,11 @@ definitions:
       schedule_details:
         $ref: '#/definitions/http.scheduleDetailsResponse'
       status:
+        type: string
+    type: object
+  http.completeProfileRequest:
+    properties:
+      role:
         type: string
     type: object
   http.contractResponse:
@@ -299,18 +306,6 @@ definitions:
       role:
         $ref: '#/definitions/domain.Role'
     type: object
-  http.loginRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    type: object
-  http.logoutRequest:
-    properties:
-      refresh_token:
-        type: string
-    type: object
   http.meResponse:
     properties:
       email:
@@ -319,8 +314,27 @@ definitions:
         type: string
       name:
         type: string
+      onboarding_status:
+        type: string
       role:
-        $ref: '#/definitions/domain.Role'
+        type: string
+    type: object
+  http.onboardingStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  http.onboardingStatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  http.permissionsResponse:
+    properties:
+      permissions:
+        items:
+          type: string
+        type: array
     type: object
   http.professionalPageResponse:
     properties:
@@ -368,21 +382,12 @@ definitions:
       years_of_experience:
         type: integer
     type: object
-  http.refreshRequest:
+  http.rolesResponse:
     properties:
-      refresh_token:
-        type: string
-    type: object
-  http.registerRequest:
-    properties:
-      email:
-        type: string
-      name:
-        type: string
-      password:
-        type: string
-      phone:
-        type: string
+      roles:
+        items:
+          type: string
+        type: array
     type: object
   http.scheduleDetailsRequest:
     properties:
@@ -422,17 +427,6 @@ definitions:
       end_time:
         type: string
       start_time:
-        type: string
-    type: object
-  http.tokenResponse:
-    properties:
-      access_token:
-        type: string
-      expires_in:
-        type: integer
-      refresh_token:
-        type: string
-      token_type:
         type: string
     type: object
   http.updateAddressRequest:
@@ -926,46 +920,17 @@ paths:
       summary: Buscar agendamentos por profissional
       tags:
       - appointments
-  /auth/login:
+  /auth/profile:
     post:
       consumes:
       - application/json
       parameters:
-      - description: Credenciais
+      - description: Papel escolhido
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/http.loginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.tokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      summary: Login
-      tags:
-      - auth
-  /auth/logout:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Refresh token
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/http.logoutRequest'
+          $ref: '#/definitions/http.completeProfileRequest'
       responses:
         "204":
           description: No Content
@@ -973,65 +938,17 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Logout
-      tags:
-      - auth
-  /auth/refresh:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Refresh token
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/http.refreshRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.tokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
         "401":
           description: Unauthorized
           schema:
             type: string
-      summary: Renovar access token
-      tags:
-      - auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Dados de cadastro
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/http.registerRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/http.tokenResponse'
-        "400":
-          description: Bad Request
+        "403":
+          description: Forbidden
           schema:
             type: string
-        "409":
-          description: Conflict
-          schema:
-            type: string
-      summary: Registrar novo usuário
+      security:
+      - BearerAuth: []
+      summary: Completar perfil (FAMILY_CLIENT ou FINANCIAL_SPONSOR)
       tags:
       - auth
   /availabilities:
@@ -1579,6 +1496,126 @@ paths:
       summary: Buscar contratos por User ID
       tags:
       - contracts
+  /me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.meResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Dados do usuário autenticado (cria o usuário de aplicação no primeiro
+        acesso)
+      tags:
+      - auth
+  /me/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.permissionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Permissões do usuário autenticado
+      tags:
+      - auth
+  /me/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.rolesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Papéis do usuário autenticado
+      tags:
+      - auth
+  /onboarding:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Novo status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/http.onboardingStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.onboardingStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Atualizar status de onboarding
+      tags:
+      - auth
+  /onboarding/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.onboardingStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Status de onboarding do usuário autenticado
+      tags:
+      - auth
   /professionals:
     get:
       parameters:
@@ -1940,27 +1977,9 @@ paths:
       summary: Upload avatar do usuário
       tags:
       - users
-  /users/me:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/http.meResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            type: string
-      security:
-      - BearerAuth: []
-      summary: Dados do usuário autenticado
-      tags:
-      - users
 securityDefinitions:
   BearerAuth:
-    description: 'JWT token no formato: Bearer {token}'
+    description: 'JWT do Supabase Auth no formato: Bearer {token}'
     in: header
     name: Authorization
     type: apiKey
